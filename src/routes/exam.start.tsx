@@ -1,0 +1,127 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { useAuth, TIER_LIMIT } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { AppHeader } from "@/components/AppHeader";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/exam/start")({ component: ExamStart });
+
+function ExamStart() {
+  const { user, profile, loading } = useAuth();
+  const navigate = useNavigate();
+  const [examType, setExamType] = useState<"RN" | "RM">("RN");
+  const [category, setCategory] = useState("General");
+  const [topics, setTopics] = useState<string[]>([]);
+  const [count, setCount] = useState(50);
+  const [minutes, setMinutes] = useState(60);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !user) navigate({ to: "/auth" });
+  }, [loading, user, navigate]);
+
+  useEffect(() => {
+    if (profile) {
+      setCount(Math.min(50, TIER_LIMIT[profile.tier]));
+      if (profile.exam_preference && profile.exam_preference !== "Both")
+        setExamType(profile.exam_preference);
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("questions").select("topic").eq("exam_type", examType);
+      const uniq = Array.from(new Set((data ?? []).map(d => d.topic))).sort();
+      setTopics(uniq);
+    })();
+  }, [examType]);
+
+  const start = async () => {
+    if (!user || !profile) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const used = profile.last_question_date === today ? profile.questions_today : 0;
+    const remaining = TIER_LIMIT[profile.tier] - used;
+    if (remaining <= 0) return toast.error("You've hit your daily limit. Upgrade your tier or come back tomorrow.");
+    if (count > remaining) return toast.error(`Only ${remaining} questions left today on your tier.`);
+
+    setBusy(true);
+    let q = supabase.from("questions").select("id").eq("exam_type", examType);
+    if (category !== "General") q = q.eq("topic", category);
+    const { data: pool, error: e1 } = await q;
+    if (e1 || !pool || pool.length === 0) {
+      setBusy(false);
+      return toast.error("No questions available for this selection. Ask an admin to upload some.");
+    }
+    const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, count);
+
+    const { data: exam, error: e2 } = await supabase.from("exams").insert({
+      user_id: user.id, exam_type: examType, category,
+      total_questions: shuffled.length, time_limit_minutes: minutes,
+    }).select().single();
+    if (e2 || !exam) { setBusy(false); return toast.error(e2?.message ?? "Failed to start"); }
+
+    const rows = shuffled.map((q, i) => ({ exam_id: exam.id, question_id: q.id, position: i }));
+    const { error: e3 } = await supabase.from("exam_answers").insert(rows);
+    if (e3) { setBusy(false); return toast.error(e3.message); }
+
+    // Update daily counter
+    await supabase.from("profiles").update({
+      questions_today: used + shuffled.length,
+      last_question_date: today,
+    }).eq("id", user.id);
+
+    navigate({ to: "/exam/$examId", params: { examId: exam.id } });
+  };
+
+  if (!profile) return <><AppHeader /><div className="p-12 text-center">Loading…</div></>;
+
+  return (
+    <>
+      <AppHeader />
+      <main className="container mx-auto px-4 py-8 max-w-2xl">
+        <h1 className="text-3xl font-bold mb-6">Configure Your Test</h1>
+        <Card className="p-6 bg-card-soft space-y-6">
+          <div>
+            <Label>Exam Type</Label>
+            <Select value={examType} onValueChange={(v) => setExamType(v as "RN" | "RM")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="RN">RN — Registered Nurse</SelectItem>
+                <SelectItem value="RM">RM — Registered Midwife</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Topic / Category</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="General">All Topics</SelectItem>
+                {topics.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Number of Questions: {count}</Label>
+            <Slider value={[count]} min={10} max={TIER_LIMIT[profile.tier]} step={10}
+              onValueChange={(v) => setCount(v[0])} className="mt-2" />
+          </div>
+          <div>
+            <Label>Time Limit: {minutes} minutes</Label>
+            <Slider value={[minutes]} min={15} max={180} step={5}
+              onValueChange={(v) => setMinutes(v[0])} className="mt-2" />
+          </div>
+          <Button onClick={start} disabled={busy} className="w-full bg-hero shadow-glow" size="lg">
+            {busy ? "Starting…" : "Begin Test"}
+          </Button>
+        </Card>
+      </main>
+    </>
+  );
+}
