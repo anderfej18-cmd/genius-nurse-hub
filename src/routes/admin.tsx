@@ -96,7 +96,7 @@ function QuestionsTab() {
         correct_answer: cols[idx("answer")]?.toUpperCase(),
         rationale: cols[idx("rationale")] || null,
       };
-    }).filter(r => r.question_text && ["RN","RM"].includes(r.exam_type) && ["A","B","C","D"].includes(r.correct_answer));
+    }).filter(r => r.question_text && ["RN","RM"].includes(r.exam_type ?? "") && ["A","B","C","D"].includes(r.correct_answer ?? "")) as Array<{ exam_type: "RN" | "RM"; topic: string; question_text: string; option_a: string; option_b: string; option_c: string; option_d: string; correct_answer: string; rationale: string | null }>;
     if (rows.length === 0) return toast.error("No valid rows found");
     const { error } = await supabase.from("questions").insert(rows);
     if (error) return toast.error(error.message);
