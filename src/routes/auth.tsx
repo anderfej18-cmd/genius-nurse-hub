@@ -17,14 +17,14 @@ const emailSchema = z.string().trim().email().max(255);
 const pwSchema = z.string().min(6).max(72);
 
 function AuthPage() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!loading && user) {
-      navigate({ to: profile?.onboarded ? "/dashboard" : "/onboarding" });
+      navigate({ to: isAdmin ? "/admin" : profile?.onboarded ? "/dashboard" : "/onboarding" });
     }
-  }, [loading, user, profile, navigate]);
+  }, [loading, user, profile, isAdmin, navigate]);
 
   return (
     <>

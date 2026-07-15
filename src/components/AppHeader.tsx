@@ -30,7 +30,7 @@ export function AppHeader() {
           <span className="font-bold text-lg tracking-tight">NurseGenius</span>
         </Link>
 
-        {user && profile?.onboarded && (
+        {user && (profile?.onboarded || isAdmin) && (
           <nav className="hidden md:flex items-center gap-1">
             {link("/dashboard", "Dashboard")}
             {link("/exam/start", "Take Test")}
