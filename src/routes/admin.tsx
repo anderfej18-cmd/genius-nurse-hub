@@ -51,9 +51,56 @@ function Admin() {
   );
 }
 
+interface ParsedQ {
+  question_text: string;
+  option_a: string; option_b: string; option_c: string; option_d: string;
+  correct_answer: string;
+  rationale: string | null;
+}
+
+function parseTxt(raw: string): ParsedQ[] {
+  // Split questions by blank line or "---" separator
+  const blocks = raw.replace(/\r\n/g, "\n").split(/\n\s*(?:---+|===+)\s*\n|\n\s*\n/).map(b => b.trim()).filter(Boolean);
+  const out: ParsedQ[] = [];
+  for (const block of blocks) {
+    const lines = block.split("\n").map(l => l.trim()).filter(Boolean);
+    let question = ""; let a = ""; let b = ""; let c = ""; let d = "";
+    let answer = ""; let explanation = "";
+    let mode: "explanation" | null = null;
+    for (const line of lines) {
+      const mQ = line.match(/^(?:Q\s*[:.)]|Question\s*[:.)])\s*(.*)$/i);
+      const mA = line.match(/^A[).:\-]\s*(.*)$/i);
+      const mB = line.match(/^B[).:\-]\s*(.*)$/i);
+      const mC = line.match(/^C[).:\-]\s*(.*)$/i);
+      const mD = line.match(/^D[).:\-]\s*(.*)$/i);
+      const mAns = line.match(/^(?:Answer|Ans|Correct)\s*[:\-]\s*([A-D])/i);
+      const mExp = line.match(/^(?:Explanation|Rationale)\s*[:\-]\s*(.*)$/i);
+      if (mQ) { question = mQ[1]; mode = null; }
+      else if (mA) { a = mA[1]; mode = null; }
+      else if (mB) { b = mB[1]; mode = null; }
+      else if (mC) { c = mC[1]; mode = null; }
+      else if (mD) { d = mD[1]; mode = null; }
+      else if (mAns) { answer = mAns[1].toUpperCase(); mode = null; }
+      else if (mExp) { explanation = mExp[1]; mode = "explanation"; }
+      else if (mode === "explanation") { explanation += " " + line; }
+      else if (!question) { question = line; }
+    }
+    if (question && a && b && c && d && ["A","B","C","D"].includes(answer)) {
+      out.push({
+        question_text: question, option_a: a, option_b: b, option_c: c, option_d: d,
+        correct_answer: answer, rationale: explanation.trim() || null,
+      });
+    }
+  }
+  return out;
+}
+
 function QuestionsTab() {
   const [examType, setExamType] = useState<"RN" | "RM">("RN");
-  const [topic, setTopic] = useState("General");
+  const [existingSubs, setExistingSubs] = useState<string[]>([]);
+  const [subMode, setSubMode] = useState<"existing" | "new">("existing");
+  const [subExisting, setSubExisting] = useState<string>("");
+  const [subNew, setSubNew] = useState<string>("");
   const [text, setText] = useState("");
   const [a, setA] = useState(""); const [b, setB] = useState("");
   const [c, setC] = useState(""); const [d, setD] = useState("");
@@ -61,47 +108,46 @@ function QuestionsTab() {
   const [rationale, setRationale] = useState("");
   const [count, setCount] = useState<number | null>(null);
 
+  const activeSub = (subMode === "new" ? subNew : subExisting).trim() || "General";
+
+  const loadSubs = async (et: "RN" | "RM") => {
+    const { data } = await supabase.from("questions").select("topic").eq("exam_type", et);
+    const uniq = Array.from(new Set((data ?? []).map(r => r.topic).filter(Boolean))).sort();
+    setExistingSubs(uniq);
+    if (uniq.length && !subExisting) setSubExisting(uniq[0]);
+  };
+
   useEffect(() => {
     supabase.from("questions").select("id", { count: "exact", head: true }).then(r => setCount(r.count ?? 0));
   }, []);
+  useEffect(() => { loadSubs(examType); /* eslint-disable-next-line */ }, [examType]);
 
   const addOne = async () => {
     if (!text || !a || !b || !c || !d) return toast.error("All fields required");
     const { error } = await supabase.from("questions").insert({
-      exam_type: examType, topic, question_text: text,
+      exam_type: examType, topic: activeSub, question_text: text,
       option_a: a, option_b: b, option_c: c, option_d: d,
       correct_answer: ans, rationale,
     });
     if (error) return toast.error(error.message);
     toast.success("Question added");
     setText(""); setA(""); setB(""); setC(""); setD(""); setRationale("");
+    loadSubs(examType);
+    setCount(c => (c ?? 0) + 1);
   };
 
-  const uploadCSV = async (file: File) => {
-    const text = await file.text();
-    const lines = text.split(/\r?\n/).filter(l => l.trim());
-    const header = lines[0].toLowerCase().split(",");
-    const idx = (k: string) => header.indexOf(k);
-    const need = ["exam_type","topic","question","a","b","c","d","answer","rationale"];
-    if (need.some(n => idx(n) === -1)) return toast.error("CSV header must be: exam_type,topic,question,a,b,c,d,answer,rationale");
-    const rows = lines.slice(1).map(line => {
-      // Naive CSV split (no embedded commas in quotes for simplicity)
-      const cols = line.match(/("([^"]|"")*"|[^,]*)(,|$)/g)?.map(c => c.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"')) ?? [];
-      return {
-        exam_type: cols[idx("exam_type")]?.toUpperCase(),
-        topic: cols[idx("topic")] || "General",
-        question_text: cols[idx("question")],
-        option_a: cols[idx("a")], option_b: cols[idx("b")],
-        option_c: cols[idx("c")], option_d: cols[idx("d")],
-        correct_answer: cols[idx("answer")]?.toUpperCase(),
-        rationale: cols[idx("rationale")] || null,
-      };
-    }).filter(r => r.question_text && ["RN","RM"].includes(r.exam_type ?? "") && ["A","B","C","D"].includes(r.correct_answer ?? "")) as Array<{ exam_type: "RN" | "RM"; topic: string; question_text: string; option_a: string; option_b: string; option_c: string; option_d: string; correct_answer: string; rationale: string | null }>;
-    if (rows.length === 0) return toast.error("No valid rows found");
+  const uploadTXT = async (file: File) => {
+    if (subMode === "new" && !subNew.trim()) return toast.error("Enter a new subcategory name first");
+    const raw = await file.text();
+    const parsed = parseTxt(raw);
+    if (parsed.length === 0) return toast.error("No valid questions found in file. Check the format.");
+    const rows = parsed.map(p => ({ exam_type: examType, topic: activeSub, ...p }));
     const { error } = await supabase.from("questions").insert(rows);
     if (error) return toast.error(error.message);
-    toast.success(`Imported ${rows.length} questions`);
+    toast.success(`Imported ${rows.length} questions into ${examType} · ${activeSub}`);
     setCount(c => (c ?? 0) + rows.length);
+    loadSubs(examType);
+    if (subMode === "new") { setSubExisting(subNew.trim()); setSubNew(""); setSubMode("existing"); }
   };
 
   return (
@@ -109,23 +155,73 @@ function QuestionsTab() {
       <Card className="p-5">
         <p className="text-sm text-muted-foreground">Total questions in bank: <strong className="text-foreground">{count ?? "…"}</strong></p>
       </Card>
-      <Card className="p-5">
-        <h3 className="font-semibold mb-3">Bulk CSV Upload</h3>
-        <p className="text-xs text-muted-foreground mb-2">
-          Header row required: <code>exam_type,topic,question,a,b,c,d,answer,rationale</code>
-        </p>
-        <Input type="file" accept=".csv" onChange={(e) => e.target.files?.[0] && uploadCSV(e.target.files[0])} />
-      </Card>
-      <Card className="p-5 space-y-3">
-        <h3 className="font-semibold">Add One Question</h3>
+
+      <Card className="p-5 space-y-4">
+        <h3 className="font-semibold">Bulk TXT Upload</h3>
+
         <div className="grid grid-cols-2 gap-3">
-          <div><Label>Exam Type</Label>
-            <Select value={examType} onValueChange={(v) => setExamType(v as "RN" | "RM")}><SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent><SelectItem value="RN">RN</SelectItem><SelectItem value="RM">RM</SelectItem></SelectContent>
+          <div>
+            <Label>Major Category</Label>
+            <Select value={examType} onValueChange={(v) => setExamType(v as "RN" | "RM")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="RN">RN — Registered Nurse</SelectItem>
+                <SelectItem value="RM">RM — Registered Midwife</SelectItem>
+              </SelectContent>
             </Select>
           </div>
-          <div><Label>Topic</Label><Input value={topic} onChange={(e) => setTopic(e.target.value)} /></div>
+          <div>
+            <Label>Subcategory Mode</Label>
+            <Select value={subMode} onValueChange={(v) => setSubMode(v as "existing" | "new")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="existing">Choose existing</SelectItem>
+                <SelectItem value="new">Create new</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+
+        {subMode === "existing" ? (
+          <div>
+            <Label>Existing Subcategory</Label>
+            {existingSubs.length === 0 ? (
+              <p className="text-xs text-muted-foreground mt-1">No subcategories yet for {examType}. Switch to “Create new”.</p>
+            ) : (
+              <Select value={subExisting} onValueChange={setSubExisting}>
+                <SelectTrigger><SelectValue placeholder="Pick one" /></SelectTrigger>
+                <SelectContent>
+                  {existingSubs.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        ) : (
+          <div>
+            <Label>New Subcategory Name</Label>
+            <Input value={subNew} onChange={(e) => setSubNew(e.target.value)} placeholder="e.g. Maternal and Child Health" />
+          </div>
+        )}
+
+        <div className="text-xs text-muted-foreground space-y-1 p-3 rounded bg-muted/40">
+          <p className="font-semibold">TXT format (one block per question, separated by blank line or ---):</p>
+          <pre className="whitespace-pre-wrap font-mono text-[11px]">{`Q: What is the normal adult resting heart rate?
+A) 40-60 bpm
+B) 60-100 bpm
+C) 100-140 bpm
+D) 140-180 bpm
+Answer: B
+Explanation: The normal adult resting heart rate ranges from 60 to 100 bpm.`}</pre>
+        </div>
+
+        <Input type="file" accept=".txt,text/plain" onChange={(e) => e.target.files?.[0] && uploadTXT(e.target.files[0])} />
+      </Card>
+
+      <Card className="p-5 space-y-3">
+        <h3 className="font-semibold">Add One Question</h3>
+        <p className="text-xs text-muted-foreground">
+          Uploading into: <strong>{examType}</strong> · <strong>{activeSub}</strong>
+        </p>
         <div><Label>Question</Label><Textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} /></div>
         <div className="grid grid-cols-2 gap-3">
           <div><Label>A</Label><Input value={a} onChange={(e) => setA(e.target.value)} /></div>
@@ -138,7 +234,7 @@ function QuestionsTab() {
             <SelectContent>{["A","B","C","D"].map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
           </Select>
         </div>
-        <div><Label>Rationale</Label><Textarea value={rationale} onChange={(e) => setRationale(e.target.value)} rows={2} /></div>
+        <div><Label>Explanation</Label><Textarea value={rationale} onChange={(e) => setRationale(e.target.value)} rows={2} /></div>
         <Button onClick={addOne} className="bg-hero">Add Question</Button>
       </Card>
     </div>

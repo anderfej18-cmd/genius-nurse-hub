@@ -5,91 +5,127 @@ import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Trophy, Star, AlertCircle } from "lucide-react";
+import { Sparkles, Copy, Check, Trophy, Star, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/exam/$examId/results")({ component: Results });
 
+const ASK_AI_URL = "https://share.google/WgqJhNxHpBmvx63OS";
+
+interface QuestionShape {
+  id: string; question_text: string; correct_answer: string; rationale: string | null; topic: string;
+  option_a: string; option_b: string; option_c: string; option_d: string;
+}
 interface Item {
   user_answer: string | null; is_correct: boolean | null; flagged: boolean; position: number;
-  questions: {
-    id: string; question_text: string; correct_answer: string; rationale: string | null; topic: string;
-    option_a: string; option_b: string; option_c: string; option_d: string;
-  };
+  questions: QuestionShape;
 }
 
 function Results() {
   const { examId } = Route.useParams();
   const [exam, setExam] = useState<{ score_pct: number | null; correct_count: number | null; total_questions: number; exam_type: string } | null>(null);
   const [items, setItems] = useState<Item[]>([]);
-  const [aiLoading, setAiLoading] = useState<string | null>(null);
-  const [aiAnswers, setAiAnswers] = useState<Record<string, string>>({});
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      const { data: e } = await supabase.from("exams").select("score_pct, correct_count, total_questions, exam_type").eq("id", examId).single();
-      setExam(e as any);
-      const { data } = await supabase.from("exam_answers")
-        .select("user_answer, is_correct, flagged, position, questions(id, question_text, correct_answer, rationale, topic, option_a, option_b, option_c, option_d)")
-        .eq("exam_id", examId).order("position");
-      setItems((data as unknown as Item[]) ?? []);
+      try {
+        const { data: e, error: eErr } = await supabase
+          .from("exams")
+          .select("score_pct, correct_count, total_questions, exam_type")
+          .eq("id", examId)
+          .maybeSingle();
+        if (eErr) throw eErr;
+        if (!e) { setLoadErr("Exam not found or you don't have access."); return; }
+        setExam(e as typeof exam);
+
+        const { data, error } = await supabase
+          .from("exam_answers")
+          .select("user_answer, is_correct, flagged, position, questions(id, question_text, correct_answer, rationale, topic, option_a, option_b, option_c, option_d)")
+          .eq("exam_id", examId)
+          .order("position");
+        if (error) throw error;
+        setItems((data as unknown as Item[]) ?? []);
+      } catch (err) {
+        setLoadErr((err as Error).message ?? "Failed to load results");
+      }
     })();
   }, [examId]);
 
-  const askAI = async (q: Item["questions"]) => {
-    setAiLoading(q.id);
+  const copyQuestion = async (q: QuestionShape) => {
+    const text = `${q.question_text}\n\nA) ${q.option_a}\nB) ${q.option_b}\nC) ${q.option_c}\nD) ${q.option_d}`;
     try {
-      const { data, error } = await supabase.functions.invoke("ask-ai", {
-        body: {
-          question: q.question_text,
-          options: { A: q.option_a, B: q.option_b, C: q.option_c, D: q.option_d },
-          correct: q.correct_answer,
-          topic: q.topic,
-        },
-      });
-      if (error) throw error;
-      setAiAnswers(p => ({ ...p, [q.id]: (data as { explanation: string }).explanation }));
-    } catch (err) {
-      toast.error((err as Error).message || "AI request failed");
-    } finally {
-      setAiLoading(null);
+      await navigator.clipboard.writeText(text);
+      setCopiedId(q.id);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopiedId(prev => (prev === q.id ? null : prev)), 1600);
+    } catch {
+      toast.error("Copy failed");
     }
   };
 
-  if (!exam) return <><AppHeader /><div className="p-12 text-center">Loading…</div></>;
+  if (loadErr) return <><AppHeader /><div className="p-12 text-center space-y-3">
+    <p className="text-destructive font-medium">{loadErr}</p>
+    <Button asChild variant="outline"><Link to="/dashboard">Back to Dashboard</Link></Button>
+  </div></>;
 
-  const score = exam.score_pct ?? 0;
+  if (!exam) return <><AppHeader /><div className="p-12 text-center">Loading results…</div></>;
+
+  const total = exam.total_questions;
+  const correct = items.filter(i => i.is_correct === true).length;
+  const attempted = items.filter(i => i.user_answer !== null).length;
+  const wrong = attempted - correct;
+  const missed = total - attempted;
+  const score = total > 0 ? (correct / total) * 100 : 0;
+
   const tag =
-    score >= 80 ? { icon: <Trophy />, label: "Trophy 🏆", cls: "bg-warning text-warning-foreground" } :
-    score >= 70 ? { icon: <Star />, label: "Solid", cls: "bg-success text-success-foreground" } :
+    score >= 80 ? { icon: <Trophy className="h-4 w-4" />, label: "Trophy 🏆", cls: "bg-warning text-warning-foreground" } :
+    score >= 70 ? { icon: <Star className="h-4 w-4" />, label: "Solid", cls: "bg-success text-success-foreground" } :
     score >= 50 ? { label: "Progress", cls: "bg-warning/60 text-warning-foreground" } :
-                  { icon: <AlertCircle />, label: "Promising — wake up strike!", cls: "bg-destructive text-destructive-foreground" };
+                  { icon: <AlertCircle className="h-4 w-4" />, label: "Keep going!", cls: "bg-destructive text-destructive-foreground" };
 
   return (
     <>
       <AppHeader />
       <main className="container mx-auto px-4 py-8 max-w-3xl space-y-6">
-        <Card className="p-8 bg-card-soft text-center shadow-glow">
-          <p className="text-sm text-muted-foreground">Your Score</p>
-          <p className="text-6xl font-bold bg-hero bg-clip-text text-transparent mt-2">{score.toFixed(1)}%</p>
-          <p className="text-sm mt-2">{exam.correct_count} / {exam.total_questions} correct</p>
-          <Badge className={`mt-3 ${tag.cls}`}>{tag.label}</Badge>
-          <div className="mt-4 flex justify-center gap-2">
+        {/* Scorecard */}
+        <Card className="p-6 md:p-8 bg-card-soft shadow-glow">
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">Your Score</p>
+            <p className="text-5xl md:text-6xl font-bold bg-hero bg-clip-text text-transparent mt-2">{score.toFixed(1)}%</p>
+            <Badge className={`mt-3 ${tag.cls}`}>{tag.label}</Badge>
+          </div>
+          <div className="mt-6 grid grid-cols-2 md:grid-cols-5 gap-3">
+            <Metric label="Total" value={total} />
+            <Metric label="Attempted" value={attempted} />
+            <Metric label="Correct" value={correct} tone="success" />
+            <Metric label="Wrong" value={wrong} tone="destructive" />
+            <Metric label="Missed" value={missed} tone="muted" />
+          </div>
+          <div className="mt-6 flex justify-center gap-2 flex-wrap">
             <Button asChild variant="outline"><Link to="/dashboard">Dashboard</Link></Button>
             <Button asChild className="bg-hero"><Link to="/exam/start">Take Another</Link></Button>
           </div>
         </Card>
 
+        {/* All questions, continuous scroll */}
         <div className="space-y-4">
           {items.map((it, i) => {
             const q = it.questions;
-            const correct = it.is_correct;
+            if (!q) return null;
+            const status: "correct" | "wrong" | "skipped" =
+              it.is_correct ? "correct" : it.user_answer ? "wrong" : "skipped";
             return (
               <Card key={q.id} className="p-5">
                 <div className="flex justify-between items-start gap-3 mb-2">
                   <p className="text-xs text-muted-foreground">Question {i + 1} • {q.topic}</p>
-                  <Badge className={correct ? "bg-success text-success-foreground" : "bg-destructive text-destructive-foreground"}>
-                    {correct ? "Correct" : it.user_answer ? "Wrong" : "Skipped"}
+                  <Badge className={
+                    status === "correct" ? "bg-success text-success-foreground" :
+                    status === "wrong" ? "bg-destructive text-destructive-foreground" :
+                    "bg-muted text-muted-foreground"
+                  }>
+                    {status === "correct" ? "Correct" : status === "wrong" ? "Wrong" : "Skipped"}
                   </Badge>
                 </div>
                 <p className="font-medium">{q.question_text}</p>
@@ -110,28 +146,48 @@ function Results() {
                     );
                   })}
                 </ul>
+
                 {q.rationale && (
                   <div className="mt-3 p-3 rounded bg-accent/40 text-sm">
-                    <p className="font-semibold text-xs uppercase text-muted-foreground mb-1">Rationale</p>
+                    <p className="font-semibold text-xs uppercase text-muted-foreground mb-1">Explanation</p>
                     {q.rationale}
                   </div>
                 )}
-                <div className="mt-3">
-                  <Button size="sm" variant="outline" onClick={() => askAI(q)} disabled={aiLoading === q.id || !!aiAnswers[q.id]}>
-                    <Sparkles className="h-4 w-4 mr-1" />
-                    {aiLoading === q.id ? "Thinking…" : aiAnswers[q.id] ? "AI explained" : "Ask AI"}
+
+                <div className="mt-3 flex gap-2 flex-wrap">
+                  <Button asChild size="sm" variant="outline">
+                    <a href={ASK_AI_URL} target="_blank" rel="noopener noreferrer">
+                      <Sparkles className="h-4 w-4 mr-1" /> Ask AI
+                    </a>
                   </Button>
-                  {aiAnswers[q.id] && (
-                    <div className="mt-3 p-3 rounded bg-primary/5 border border-primary/20 text-sm whitespace-pre-wrap">
-                      {aiAnswers[q.id]}
-                    </div>
-                  )}
+                  <Button size="sm" variant="outline" onClick={() => copyQuestion(q)}>
+                    {copiedId === q.id
+                      ? <><Check className="h-4 w-4 mr-1" /> Copied!</>
+                      : <><Copy className="h-4 w-4 mr-1" /> Copy</>}
+                  </Button>
                 </div>
               </Card>
             );
           })}
+          {items.length === 0 && (
+            <Card className="p-6 text-center text-muted-foreground text-sm">No questions to review.</Card>
+          )}
         </div>
       </main>
     </>
+  );
+}
+
+function Metric({ label, value, tone }: { label: string; value: number; tone?: "success" | "destructive" | "muted" }) {
+  const cls =
+    tone === "success" ? "text-success" :
+    tone === "destructive" ? "text-destructive" :
+    tone === "muted" ? "text-muted-foreground" :
+    "text-foreground";
+  return (
+    <div className="rounded-lg border p-3 text-center bg-background/50">
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={`text-2xl font-bold mt-1 ${cls}`}>{value}</p>
+    </div>
   );
 }
