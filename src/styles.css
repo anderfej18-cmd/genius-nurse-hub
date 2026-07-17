@@ -131,7 +131,8 @@
 }
 
 @layer utilities {
-  .bg-hero { background: var(--gradient-hero); }
+  .bg-hero { background-image: var(--gradient-hero); }
+  .bg-clip-text.bg-hero { -webkit-text-fill-color: transparent; }
   .bg-card-soft { background: var(--gradient-card); }
   .shadow-glow { box-shadow: var(--shadow-glow); }
   .shadow-soft { box-shadow: var(--shadow-soft); }
