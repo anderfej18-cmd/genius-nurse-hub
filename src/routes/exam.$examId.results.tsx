@@ -10,10 +10,10 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/exam/$examId/results")({ component: Results });
 
-const buildAskAiUrl = (q: QuestionShape) => {
-  const prompt = `Explain this nursing exam question and why the correct answer is ${q.correct_answer}:\n\n${q.question_text}\n\nA) ${q.option_a}\nB) ${q.option_b}\nC) ${q.option_c}\nD) ${q.option_d}`;
-  return `https://www.google.com/search?udm=50&aep=11&q=${encodeURIComponent(prompt)}`;
-};
+const GEMINI_URL = "https://gemini.google.com/app";
+
+const buildAskAiPrompt = (q: QuestionShape) =>
+  `Explain this nursing exam question and why the correct answer is ${q.correct_answer}:\n\n${q.question_text}\n\nA) ${q.option_a}\nB) ${q.option_b}\nC) ${q.option_c}\nD) ${q.option_d}`;
 
 interface QuestionShape {
   id: string; question_text: string; correct_answer: string; rationale: string | null; topic: string;
@@ -66,6 +66,24 @@ function Results() {
     } catch {
       toast.error("Copy failed");
     }
+  };
+
+  const openAskAi = async (q: QuestionShape) => {
+    const tab = window.open(GEMINI_URL, "_blank");
+    if (tab) {
+      tab.opener = null;
+    } else {
+      window.location.assign(GEMINI_URL);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(buildAskAiPrompt(q));
+      toast.success("Question copied — paste it into Gemini");
+    } catch {
+      toast.message("Opening Gemini");
+    }
+
   };
 
   if (loadErr) return <><AppHeader /><div className="p-12 text-center space-y-3">
@@ -158,10 +176,8 @@ function Results() {
                 )}
 
                 <div className="mt-3 flex gap-2 flex-wrap">
-                  <Button asChild size="sm" variant="outline">
-                    <a href={buildAskAiUrl(q)} target="_blank" rel="noopener noreferrer">
-                      <Sparkles className="h-4 w-4 mr-1" /> Ask AI
-                    </a>
+                  <Button size="sm" variant="outline" onClick={() => openAskAi(q)}>
+                    <Sparkles className="h-4 w-4 mr-1" /> Ask AI
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => copyQuestion(q)}>
                     {copiedId === q.id
