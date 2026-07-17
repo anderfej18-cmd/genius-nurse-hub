@@ -159,7 +159,7 @@ function Results() {
 
                 <div className="mt-3 flex gap-2 flex-wrap">
                   <Button asChild size="sm" variant="outline">
-                    <a href={ASK_AI_URL} target="_blank" rel="noopener noreferrer">
+                    <a href={buildAskAiUrl(q)} target="_blank" rel="noopener noreferrer">
                       <Sparkles className="h-4 w-4 mr-1" /> Ask AI
                     </a>
                   </Button>
