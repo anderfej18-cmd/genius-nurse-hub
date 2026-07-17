@@ -10,7 +10,10 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/exam/$examId/results")({ component: Results });
 
-const ASK_AI_URL = "https://gemini.google.com/?source=sh/x/srp/wr/m1/0&kgs=b98fe9c0afd0ae8a&shem=shrtsdl&utm_source=shrtsdl,sh/x/srp/wr/m1/0";
+const buildAskAiUrl = (q: QuestionShape) => {
+  const prompt = `Explain this nursing exam question and why the correct answer is ${q.correct_answer}:\n\n${q.question_text}\n\nA) ${q.option_a}\nB) ${q.option_b}\nC) ${q.option_c}\nD) ${q.option_d}`;
+  return `https://www.google.com/search?udm=50&aep=11&q=${encodeURIComponent(prompt)}`;
+};
 
 interface QuestionShape {
   id: string; question_text: string; correct_answer: string; rationale: string | null; topic: string;
@@ -156,7 +159,7 @@ function Results() {
 
                 <div className="mt-3 flex gap-2 flex-wrap">
                   <Button asChild size="sm" variant="outline">
-                    <a href={ASK_AI_URL} target="_blank" rel="noopener noreferrer">
+                    <a href={buildAskAiUrl(q)} target="_blank" rel="noopener noreferrer">
                       <Sparkles className="h-4 w-4 mr-1" /> Ask AI
                     </a>
                   </Button>
