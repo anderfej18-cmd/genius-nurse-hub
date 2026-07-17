@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/exam/$examId/results")({ component: Results });
 
-const ASK_AI_URL = "https://share.google/WgqJhNxHpBmvx63OS";
+const ASK_AI_URL = "https://gemini.google.com/?source=sh/x/srp/wr/m1/0&kgs=b98fe9c0afd0ae8a&shem=shrtsdl&utm_source=shrtsdl,sh/x/srp/wr/m1/0";
 
 interface QuestionShape {
   id: string; question_text: string; correct_answer: string; rationale: string | null; topic: string;
