@@ -69,6 +69,14 @@ function Results() {
   };
 
   const openAskAi = async (q: QuestionShape) => {
+    const tab = window.open(GEMINI_URL, "_blank");
+    if (tab) {
+      tab.opener = null;
+    } else {
+      window.location.assign(GEMINI_URL);
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(buildAskAiPrompt(q));
       toast.success("Question copied — paste it into Gemini");
@@ -76,10 +84,6 @@ function Results() {
       toast.message("Opening Gemini");
     }
 
-    const tab = window.open(GEMINI_URL, "_blank", "noopener,noreferrer");
-    if (!tab) {
-      window.location.assign(GEMINI_URL);
-    }
   };
 
   if (loadErr) return <><AppHeader /><div className="p-12 text-center space-y-3">
