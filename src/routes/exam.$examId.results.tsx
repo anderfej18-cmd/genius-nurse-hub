@@ -177,8 +177,10 @@ function Results() {
                 )}
 
                 <div className="mt-3 flex gap-2 flex-wrap">
-                  <Button size="sm" variant="outline" onClick={() => openAskAi(q)}>
-                    <Sparkles className="h-4 w-4 mr-1" /> Ask AI
+                  <Button size="sm" variant="outline" onClick={() => askAi(q)} disabled={aiLoadingId === q.id}>
+                    {aiLoadingId === q.id
+                      ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Thinking…</>
+                      : <><Sparkles className="h-4 w-4 mr-1" /> Ask AI</>}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => copyQuestion(q)}>
                     {copiedId === q.id
@@ -186,6 +188,14 @@ function Results() {
                       : <><Copy className="h-4 w-4 mr-1" /> Copy</>}
                   </Button>
                 </div>
+                {aiAnswers[q.id] && (
+                  <div className="mt-3 p-3 rounded bg-primary/10 border border-primary/20 text-sm whitespace-pre-wrap">
+                    <p className="font-semibold text-xs uppercase text-primary mb-1 flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" /> AI Explanation
+                    </p>
+                    {aiAnswers[q.id]}
+                  </div>
+                )}
               </Card>
             );
           })}
