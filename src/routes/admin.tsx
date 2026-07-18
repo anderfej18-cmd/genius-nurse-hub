@@ -296,6 +296,10 @@ interface UserRow { id: string; email: string | null; username: string | null; t
 function UsersTab() {
   const [rows, setRows] = useState<UserRow[]>([]);
   const [exams, setExams] = useState<Record<string, { avg: number; n: number }>>({});
+  const [filter, setFilter] = useState("");
+  const [assignFor, setAssignFor] = useState<string | null>(null);
+  const [assignTier, setAssignTier] = useState<"erudite" | "scholar">("erudite");
+  const [assignDays, setAssignDays] = useState<number>(30);
 
   const load = async () => {
     const { data } = await supabase.from("profiles").select("id, email, username, tier, expiry_date");
@@ -311,28 +315,81 @@ function UsersTab() {
   useEffect(() => { load(); }, []);
 
   const reset = async (id: string) => {
-    if (!confirm("Reset this user to Novice?")) return;
-    const { error } = await supabase.rpc("reset_user_to_novice", { _user_id: id });
+    if (!confirm("Revoke this user's tier and revert to Novice?")) return;
+    const { error } = await supabase.rpc("assign_user_tier", { _user_id: id, _tier: "novice", _days: 0 });
     if (error) return toast.error(error.message);
-    toast.success("User reset");
+    toast.success("Reverted to Novice");
     load();
   };
 
+  const assign = async () => {
+    if (!assignFor) return;
+    if (assignDays < 0) return toast.error("Days must be 0 or greater (0 = no expiry)");
+    const { error } = await supabase.rpc("assign_user_tier", {
+      _user_id: assignFor, _tier: assignTier, _days: assignDays,
+    });
+    if (error) return toast.error(error.message);
+    toast.success(`Assigned ${assignTier}${assignDays > 0 ? ` for ${assignDays} days` : " (no expiry)"}`);
+    setAssignFor(null);
+    load();
+  };
+
+  const filtered = rows.filter(u => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return true;
+    return (u.email ?? "").toLowerCase().includes(q) || (u.username ?? "").toLowerCase().includes(q);
+  });
+
   return (
-    <Card className="p-4 mt-4 divide-y">
-      {rows.map(u => (
-        <div key={u.id} className="py-3 flex items-center justify-between gap-3 flex-wrap">
-          <div className="text-sm">
-            <p className="font-medium">{u.username ?? "—"} <span className="text-muted-foreground">({u.email})</span></p>
-            <p className="text-xs text-muted-foreground">
-              {u.tier} {u.expiry_date && `· expires ${new Date(u.expiry_date).toLocaleDateString()}`}
-              {exams[u.id] && ` · avg ${exams[u.id].avg.toFixed(1)}% (${exams[u.id].n} tests)`}
-            </p>
+    <div className="mt-4 space-y-3">
+      <Input placeholder="Search by name or email…" value={filter} onChange={(e) => setFilter(e.target.value)} />
+      <Card className="p-4 divide-y">
+        {filtered.length === 0 && <p className="p-6 text-center text-muted-foreground text-sm">No users.</p>}
+        {filtered.map(u => (
+          <div key={u.id} className="py-3 space-y-2">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="text-sm">
+                <p className="font-medium">{u.username ?? "—"} <span className="text-muted-foreground">({u.email})</span></p>
+                <p className="text-xs text-muted-foreground">
+                  <Badge variant="secondary" className="mr-1">{u.tier}</Badge>
+                  {u.expiry_date && `expires ${new Date(u.expiry_date).toLocaleDateString()}`}
+                  {exams[u.id] && ` · avg ${exams[u.id].avg.toFixed(1)}% (${exams[u.id].n} tests)`}
+                </p>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Button size="sm" variant="outline" onClick={() => { setAssignFor(assignFor === u.id ? null : u.id); }}>
+                  {assignFor === u.id ? "Cancel" : "Assign Tier"}
+                </Button>
+                {u.tier !== "novice" && (
+                  <Button size="sm" variant="destructive" onClick={() => reset(u.id)}>Revoke</Button>
+                )}
+              </div>
+            </div>
+            {assignFor === u.id && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-3 rounded bg-muted/40">
+                <div>
+                  <Label className="text-xs">Tier</Label>
+                  <Select value={assignTier} onValueChange={(v) => setAssignTier(v as "erudite" | "scholar")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="erudite">Erudite (500/day, 150/session)</SelectItem>
+                      <SelectItem value="scholar">Scholar (unlimited/day, 250/session)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Duration (days, 0 = no expiry)</Label>
+                  <Input type="number" min={0} value={assignDays} onChange={(e) => setAssignDays(Number(e.target.value))} />
+                </div>
+                <div className="flex items-end">
+                  <Button size="sm" className="bg-hero w-full" onClick={assign}>Confirm Assign</Button>
+                </div>
+              </div>
+            )}
           </div>
-          {u.tier !== "novice" && <Button size="sm" variant="destructive" onClick={() => reset(u.id)}>Kill-Switch</Button>}
-        </div>
-      ))}
-    </Card>
+        ))}
+      </Card>
+    </div>
   );
 }
 
