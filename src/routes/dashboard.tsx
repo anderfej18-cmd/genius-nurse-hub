@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useAuth, TIER_LABEL, TIER_LIMIT } from "@/hooks/use-auth";
+import { useAuth, TIER_LABEL, TIER_DAILY_LIMIT } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
@@ -59,7 +59,7 @@ function Dashboard() {
 
   if (loading || !profile) return <><AppHeader /><div className="p-12 text-center text-muted-foreground">Loading…</div></>;
 
-  const dailyLimit = TIER_LIMIT[profile.tier];
+  const dailyLimit = TIER_DAILY_LIMIT[profile.tier];
   const today = new Date().toISOString().slice(0, 10);
   const usedToday = profile.last_question_date === today ? profile.questions_today : 0;
   const avgScore = exams.length ? exams.reduce((s, e) => s + (e.score_pct ?? 0), 0) / exams.length : 0;
@@ -98,8 +98,8 @@ function Dashboard() {
           </Card>
           <Card className="p-5 bg-card-soft">
             <p className="text-xs uppercase text-muted-foreground">Daily Questions</p>
-            <p className="text-2xl font-bold mt-1">{usedToday} / {dailyLimit}</p>
-            <Progress value={(usedToday / dailyLimit) * 100} className="mt-2" />
+            <p className="text-2xl font-bold mt-1">{usedToday} / {dailyLimit === null ? "∞" : dailyLimit}</p>
+            {dailyLimit !== null && <Progress value={(usedToday / dailyLimit) * 100} className="mt-2" />}
           </Card>
           <Card className="p-5 bg-card-soft">
             <p className="text-xs uppercase text-muted-foreground">Avg Score (last {exams.length})</p>

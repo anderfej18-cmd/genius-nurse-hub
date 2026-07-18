@@ -329,7 +329,26 @@ export type Database = {
     }
     Functions: {
       approve_receipt: { Args: { _receipt_id: string }; Returns: undefined }
+      assign_user_tier: {
+        Args: {
+          _days: number
+          _tier: Database["public"]["Enums"]["user_tier"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
       check_expire_tier: { Args: { _user_id: string }; Returns: undefined }
+      daily_reset: { Args: never; Returns: undefined }
+      get_daily_leaderboard: {
+        Args: never
+        Returns: {
+          attempted: number
+          avg_score: number
+          correct: number
+          user_id: string
+          username: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

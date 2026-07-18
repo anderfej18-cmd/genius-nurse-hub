@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useAuth, TIER_LIMIT } from "@/hooks/use-auth";
+import { useAuth, TIER_DAILY_LIMIT, TIER_SESSION_LIMIT } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
@@ -28,7 +28,7 @@ function ExamStart() {
 
   useEffect(() => {
     if (profile) {
-      setCount(Math.min(50, TIER_LIMIT[profile.tier]));
+      setCount(Math.min(50, TIER_SESSION_LIMIT[profile.tier]));
       if (profile.exam_preference && profile.exam_preference !== "Both")
         setExamType(profile.exam_preference);
     }
@@ -46,9 +46,14 @@ function ExamStart() {
     if (!user || !profile) return;
     const today = new Date().toISOString().slice(0, 10);
     const used = profile.last_question_date === today ? profile.questions_today : 0;
-    const remaining = TIER_LIMIT[profile.tier] - used;
-    if (remaining <= 0) return toast.error("You've hit your daily limit. Upgrade your tier or come back tomorrow.");
-    if (count > remaining) return toast.error(`Only ${remaining} questions left today on your tier.`);
+    const sessionCap = TIER_SESSION_LIMIT[profile.tier];
+    const dailyCap = TIER_DAILY_LIMIT[profile.tier]; // null = unlimited
+    if (count > sessionCap) return toast.error(`${profile.tier} tier allows max ${sessionCap} questions per quiz.`);
+    if (dailyCap !== null) {
+      const remaining = dailyCap - used;
+      if (remaining <= 0) return toast.error("You've hit your daily limit. Upgrade your tier or come back tomorrow.");
+      if (count > remaining) return toast.error(`Only ${remaining} questions left today on your tier.`);
+    }
 
     setBusy(true);
     let q = supabase.from("questions").select("id").eq("exam_type", examType);
@@ -109,7 +114,7 @@ function ExamStart() {
           </div>
           <div>
             <Label>Number of Questions: {count}</Label>
-            <Slider value={[count]} min={10} max={TIER_LIMIT[profile.tier]} step={10}
+            <Slider value={[count]} min={10} max={TIER_SESSION_LIMIT[profile.tier]} step={10}
               onValueChange={(v) => setCount(v[0])} className="mt-2" />
           </div>
           <div>
