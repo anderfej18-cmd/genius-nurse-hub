@@ -59,7 +59,7 @@ function Dashboard() {
 
   if (loading || !profile) return <><AppHeader /><div className="p-12 text-center text-muted-foreground">Loading…</div></>;
 
-  const dailyLimit = TIER_LIMIT[profile.tier];
+  const dailyLimit = TIER_DAILY_LIMIT[profile.tier];
   const today = new Date().toISOString().slice(0, 10);
   const usedToday = profile.last_question_date === today ? profile.questions_today : 0;
   const avgScore = exams.length ? exams.reduce((s, e) => s + (e.score_pct ?? 0), 0) / exams.length : 0;
