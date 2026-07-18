@@ -114,7 +114,7 @@ function ExamStart() {
           </div>
           <div>
             <Label>Number of Questions: {count}</Label>
-            <Slider value={[count]} min={10} max={TIER_LIMIT[profile.tier]} step={10}
+            <Slider value={[count]} min={10} max={TIER_SESSION_LIMIT[profile.tier]} step={10}
               onValueChange={(v) => setCount(v[0])} className="mt-2" />
           </div>
           <div>
