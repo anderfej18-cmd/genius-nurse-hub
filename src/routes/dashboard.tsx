@@ -98,8 +98,8 @@ function Dashboard() {
           </Card>
           <Card className="p-5 bg-card-soft">
             <p className="text-xs uppercase text-muted-foreground">Daily Questions</p>
-            <p className="text-2xl font-bold mt-1">{usedToday} / {dailyLimit}</p>
-            <Progress value={(usedToday / dailyLimit) * 100} className="mt-2" />
+            <p className="text-2xl font-bold mt-1">{usedToday} / {dailyLimit === null ? "∞" : dailyLimit}</p>
+            {dailyLimit !== null && <Progress value={(usedToday / dailyLimit) * 100} className="mt-2" />}
           </Card>
           <Card className="p-5 bg-card-soft">
             <p className="text-xs uppercase text-muted-foreground">Avg Score (last {exams.length})</p>
