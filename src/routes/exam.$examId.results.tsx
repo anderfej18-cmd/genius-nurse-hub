@@ -25,6 +25,8 @@ function Results() {
   const [items, setItems] = useState<Item[]>([]);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [aiLoadingId, setAiLoadingId] = useState<string | null>(null);
+  const [aiAnswers, setAiAnswers] = useState<Record<string, string>>({});
 
   useEffect(() => {
     (async () => {
