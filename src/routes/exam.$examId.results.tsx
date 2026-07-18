@@ -63,22 +63,26 @@ function Results() {
     }
   };
 
-  const openAskAi = async (q: QuestionShape) => {
-    const tab = window.open(GEMINI_URL, "_blank");
-    if (tab) {
-      tab.opener = null;
-    } else {
-      window.location.assign(GEMINI_URL);
-      return;
-    }
-
+  const askAi = async (q: QuestionShape) => {
+    setAiLoadingId(q.id);
     try {
-      await navigator.clipboard.writeText(buildAskAiPrompt(q));
-      toast.success("Question copied — paste it into Gemini");
-    } catch {
-      toast.message("Opening Gemini");
+      const { data, error } = await supabase.functions.invoke("ask-ai", {
+        body: {
+          question: q.question_text,
+          options: { A: q.option_a, B: q.option_b, C: q.option_c, D: q.option_d },
+          correct: q.correct_answer,
+          topic: q.topic,
+        },
+      });
+      if (error) throw error;
+      if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+      const explanation = (data as { explanation?: string })?.explanation ?? "No response.";
+      setAiAnswers(prev => ({ ...prev, [q.id]: explanation }));
+    } catch (e) {
+      toast.error((e as Error).message || "AI request failed");
+    } finally {
+      setAiLoadingId(null);
     }
-
   };
 
   if (loadErr) return <><AppHeader /><div className="p-12 text-center space-y-3">
