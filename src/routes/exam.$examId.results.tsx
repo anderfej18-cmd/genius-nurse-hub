@@ -5,15 +5,10 @@ import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Copy, Check, Trophy, Star, AlertCircle } from "lucide-react";
+import { Sparkles, Copy, Check, Trophy, Star, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/exam/$examId/results")({ component: Results });
-
-const GEMINI_URL = "https://gemini.google.com/app";
-
-const buildAskAiPrompt = (q: QuestionShape) =>
-  `Explain this nursing exam question and why the correct answer is ${q.correct_answer}:\n\n${q.question_text}\n\nA) ${q.option_a}\nB) ${q.option_b}\nC) ${q.option_c}\nD) ${q.option_d}`;
 
 interface QuestionShape {
   id: string; question_text: string; correct_answer: string; rationale: string | null; topic: string;
@@ -30,6 +25,8 @@ function Results() {
   const [items, setItems] = useState<Item[]>([]);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [aiLoadingId, setAiLoadingId] = useState<string | null>(null);
+  const [aiAnswers, setAiAnswers] = useState<Record<string, string>>({});
 
   useEffect(() => {
     (async () => {
@@ -68,22 +65,26 @@ function Results() {
     }
   };
 
-  const openAskAi = async (q: QuestionShape) => {
-    const tab = window.open(GEMINI_URL, "_blank");
-    if (tab) {
-      tab.opener = null;
-    } else {
-      window.location.assign(GEMINI_URL);
-      return;
-    }
-
+  const askAi = async (q: QuestionShape) => {
+    setAiLoadingId(q.id);
     try {
-      await navigator.clipboard.writeText(buildAskAiPrompt(q));
-      toast.success("Question copied — paste it into Gemini");
-    } catch {
-      toast.message("Opening Gemini");
+      const { data, error } = await supabase.functions.invoke("ask-ai", {
+        body: {
+          question: q.question_text,
+          options: { A: q.option_a, B: q.option_b, C: q.option_c, D: q.option_d },
+          correct: q.correct_answer,
+          topic: q.topic,
+        },
+      });
+      if (error) throw error;
+      if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+      const explanation = (data as { explanation?: string })?.explanation ?? "No response.";
+      setAiAnswers(prev => ({ ...prev, [q.id]: explanation }));
+    } catch (e) {
+      toast.error((e as Error).message || "AI request failed");
+    } finally {
+      setAiLoadingId(null);
     }
-
   };
 
   if (loadErr) return <><AppHeader /><div className="p-12 text-center space-y-3">
@@ -176,8 +177,10 @@ function Results() {
                 )}
 
                 <div className="mt-3 flex gap-2 flex-wrap">
-                  <Button size="sm" variant="outline" onClick={() => openAskAi(q)}>
-                    <Sparkles className="h-4 w-4 mr-1" /> Ask AI
+                  <Button size="sm" variant="outline" onClick={() => askAi(q)} disabled={aiLoadingId === q.id}>
+                    {aiLoadingId === q.id
+                      ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Thinking…</>
+                      : <><Sparkles className="h-4 w-4 mr-1" /> Ask AI</>}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => copyQuestion(q)}>
                     {copiedId === q.id
@@ -185,6 +188,14 @@ function Results() {
                       : <><Copy className="h-4 w-4 mr-1" /> Copy</>}
                   </Button>
                 </div>
+                {aiAnswers[q.id] && (
+                  <div className="mt-3 p-3 rounded bg-primary/10 border border-primary/20 text-sm whitespace-pre-wrap">
+                    <p className="font-semibold text-xs uppercase text-primary mb-1 flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" /> AI Explanation
+                    </p>
+                    {aiAnswers[q.id]}
+                  </div>
+                )}
               </Card>
             );
           })}
