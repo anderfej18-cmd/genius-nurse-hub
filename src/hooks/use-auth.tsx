@@ -105,4 +105,21 @@ export const TIER_LABEL: Record<Tier, string> = {
   erudite: "Erudite",
   scholar: "Scholar",
 };
-export const TIER_LIMIT: Record<Tier, number> = { novice: 50, erudite: 150, scholar: 250 };
+// Daily caps (null = unlimited)
+export const TIER_DAILY_LIMIT: Record<Tier, number | null> = {
+  novice: 50,
+  erudite: 500,
+  scholar: null,
+};
+// Per-session cap (max questions in one quiz)
+export const TIER_SESSION_LIMIT: Record<Tier, number> = {
+  novice: 50,
+  erudite: 150,
+  scholar: 250,
+};
+// Back-compat alias used by older components — represents the daily allowance ceiling shown in UI
+export const TIER_LIMIT: Record<Tier, number> = {
+  novice: 50,
+  erudite: 500,
+  scholar: 250,
+};
