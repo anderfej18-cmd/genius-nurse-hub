@@ -5,15 +5,10 @@ import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Copy, Check, Trophy, Star, AlertCircle } from "lucide-react";
+import { Sparkles, Copy, Check, Trophy, Star, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/exam/$examId/results")({ component: Results });
-
-const GEMINI_URL = "https://gemini.google.com/app";
-
-const buildAskAiPrompt = (q: QuestionShape) =>
-  `Explain this nursing exam question and why the correct answer is ${q.correct_answer}:\n\n${q.question_text}\n\nA) ${q.option_a}\nB) ${q.option_b}\nC) ${q.option_c}\nD) ${q.option_d}`;
 
 interface QuestionShape {
   id: string; question_text: string; correct_answer: string; rationale: string | null; topic: string;
