@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useAuth, TIER_LABEL, TIER_LIMIT } from "@/hooks/use-auth";
+import { useAuth, TIER_LABEL, TIER_DAILY_LIMIT } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
