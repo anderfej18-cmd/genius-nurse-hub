@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { LeaderboardTable } from "@/components/LeaderboardTable";
 
 export const Route = createFileRoute("/admin")({ component: Admin });
 
@@ -464,5 +465,22 @@ function JoinTab() {
       <Input value={code} onChange={(e) => setCode(e.target.value)} maxLength={4} className="font-mono text-center text-xl mt-2" />
       <Button onClick={submit} className="bg-hero w-full mt-3">Redeem</Button>
     </Card>
+  );
+}
+
+function LeaderboardsTab() {
+  return (
+    <div className="space-y-8">
+      <div>
+        <h3 className="text-lg font-bold mb-1">Daily Leaderboard (Live)</h3>
+        <p className="text-xs text-muted-foreground mb-3">Live view — 100+ questions today required. Ranked by avg %, ties broken by more questions attempted.</p>
+        <LeaderboardTable rpc="get_daily_leaderboard" liveShuffle />
+      </div>
+      <div>
+        <h3 className="text-lg font-bold mb-1">Weekly Performance Board</h3>
+        <p className="text-xs text-muted-foreground mb-3">Mon–Sun (UTC). Requires 100+ questions on at least 4 of 7 days. Resets Monday 00:00 UTC.</p>
+        <LeaderboardTable rpc="get_weekly_leaderboard" showActiveDays emptyMessage="No consistent qualifiers this week yet — users must hit 100+ questions on 4 of 7 days." />
+      </div>
+    </div>
   );
 }
