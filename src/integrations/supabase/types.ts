@@ -170,8 +170,11 @@ export type Database = {
       payment_receipts: {
         Row: {
           amount: number | null
+          auto_approved: boolean
           created_at: string
+          extracted_text: string | null
           file_path: string
+          flag_reason: string | null
           id: string
           notes: string | null
           reviewed_at: string | null
@@ -179,11 +182,15 @@ export type Database = {
           status: Database["public"]["Enums"]["receipt_status"]
           target_tier: Database["public"]["Enums"]["user_tier"]
           user_id: string
+          verified_at: string | null
         }
         Insert: {
           amount?: number | null
+          auto_approved?: boolean
           created_at?: string
+          extracted_text?: string | null
           file_path: string
+          flag_reason?: string | null
           id?: string
           notes?: string | null
           reviewed_at?: string | null
@@ -191,11 +198,15 @@ export type Database = {
           status?: Database["public"]["Enums"]["receipt_status"]
           target_tier: Database["public"]["Enums"]["user_tier"]
           user_id: string
+          verified_at?: string | null
         }
         Update: {
           amount?: number | null
+          auto_approved?: boolean
           created_at?: string
+          extracted_text?: string | null
           file_path?: string
+          flag_reason?: string | null
           id?: string
           notes?: string | null
           reviewed_at?: string | null
@@ -203,6 +214,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["receipt_status"]
           target_tier?: Database["public"]["Enums"]["user_tier"]
           user_id?: string
+          verified_at?: string | null
         }
         Relationships: []
       }
@@ -217,6 +229,7 @@ export type Database = {
           id: string
           last_name: string | null
           last_question_date: string | null
+          legal_full_name: string | null
           onboarded: boolean
           questions_today: number
           tier: Database["public"]["Enums"]["user_tier"]
@@ -232,6 +245,7 @@ export type Database = {
           id: string
           last_name?: string | null
           last_question_date?: string | null
+          legal_full_name?: string | null
           onboarded?: boolean
           questions_today?: number
           tier?: Database["public"]["Enums"]["user_tier"]
@@ -247,6 +261,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           last_question_date?: string | null
+          legal_full_name?: string | null
           onboarded?: boolean
           questions_today?: number
           tier?: Database["public"]["Enums"]["user_tier"]
@@ -302,6 +317,41 @@ export type Database = {
         }
         Relationships: []
       }
+      receipt_fingerprints: {
+        Row: {
+          created_at: string
+          extracted_text: string | null
+          fingerprint: string
+          id: string
+          receipt_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          extracted_text?: string | null
+          fingerprint: string
+          id?: string
+          receipt_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          extracted_text?: string | null
+          fingerprint?: string
+          id?: string
+          receipt_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_fingerprints_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "payment_receipts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -337,8 +387,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      auto_upgrade_from_receipt: {
+        Args: {
+          _amount: number
+          _file_path: string
+          _tier: Database["public"]["Enums"]["user_tier"]
+        }
+        Returns: string
+      }
       check_expire_tier: { Args: { _user_id: string }; Returns: undefined }
       daily_reset: { Args: never; Returns: undefined }
+      flag_receipt_and_revoke: {
+        Args: { _reason: string; _receipt_id: string }
+        Returns: undefined
+      }
       get_daily_leaderboard: {
         Args: never
         Returns: {
@@ -368,6 +430,14 @@ export type Database = {
         Returns: boolean
       }
       is_any_admin: { Args: { _user_id: string }; Returns: boolean }
+      record_receipt_fingerprint: {
+        Args: {
+          _extracted_text: string
+          _fingerprint: string
+          _receipt_id: string
+        }
+        Returns: boolean
+      }
       redeem_admin_code: { Args: { _code: string }; Returns: boolean }
       reset_user_to_novice: { Args: { _user_id: string }; Returns: undefined }
     }
