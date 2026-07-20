@@ -51,6 +51,8 @@ function Payments() {
     })();
   }, [user]);
 
+  const verifyFn = useServerFn(verifyReceipt);
+
   const upload = async () => {
     if (!user || !file || !settings) return;
     setBusy(true);
@@ -58,17 +60,33 @@ function Payments() {
     const { error: upErr } = await supabase.storage.from("receipts").upload(path, file);
     if (upErr) { setBusy(false); return toast.error(upErr.message); }
     const amount = tier === "erudite" ? settings.erudite_price : settings.scholar_price;
-    const { error } = await supabase.from("payment_receipts").insert({
-      user_id: user.id, file_path: path, amount, target_tier: tier,
+
+    // Instant upgrade + auto-approved receipt row
+    const { data: receiptId, error } = await supabase.rpc("auto_upgrade_from_receipt", {
+      _file_path: path, _tier: tier, _amount: amount,
     });
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success("Receipt submitted! Awaiting admin approval.");
+    if (error) { setBusy(false); return toast.error(error.message); }
+
+    toast.success("Upgrade activated! Verifying receipt in background…");
     setFile(null);
-    const { data: r } = await supabase.from("payment_receipts")
-      .select("id, status, target_tier, amount, created_at")
-      .eq("user_id", user.id).order("created_at", { ascending: false });
-    setReceipts((r as Receipt[]) ?? []);
+
+    // Kick off server-side OCR + duplicate/amount guard
+    verifyFn({ data: { receiptId: receiptId as unknown as string } })
+      .then((res) => {
+        if (!res.ok) {
+          if (res.reason === "duplicate" || res.reason === "amount_mismatch") {
+            toast.error(`Access revoked — ${("detail" in res && res.detail) || res.reason}`);
+          }
+        }
+      })
+      .catch(() => { /* silent; admin can still act */ })
+      .finally(async () => {
+        setBusy(false);
+        const { data: r } = await supabase.from("payment_receipts")
+          .select("id, status, target_tier, amount, created_at")
+          .eq("user_id", user.id).order("created_at", { ascending: false });
+        setReceipts((r as Receipt[]) ?? []);
+      });
   };
 
   const copyAccount = () => {
