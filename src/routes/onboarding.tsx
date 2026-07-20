@@ -72,6 +72,18 @@ function Onboarding() {
               <div><Label>Last Name</Label><Input value={last} onChange={(e) => setLast(e.target.value)} maxLength={50} /></div>
             </div>
             <div>
+              <Label>Legal Full Name</Label>
+              <Input
+                value={legalName}
+                onChange={(e) => setLegalName(e.target.value)}
+                maxLength={100}
+                placeholder="e.g. Chidinma Grace Okeke"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Must match the name on your bank account — used to verify payments.
+              </p>
+            </div>
+            <div>
               <Label>Username</Label>
               <Input value={username} onChange={(e) => setUsername(e.target.value)} maxLength={25} />
             </div>
