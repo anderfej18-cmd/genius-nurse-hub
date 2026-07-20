@@ -18,6 +18,7 @@ function Onboarding() {
 
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
+  const [legalName, setLegalName] = useState("");
   const [username, setUsername] = useState("Nurse");
   const [examDate, setExamDate] = useState("");
   const [pref, setPref] = useState<"RN" | "RM" | "Both">("RN");
@@ -33,6 +34,7 @@ function Onboarding() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!first.trim() || !last.trim()) return toast.error("First and last name required");
+    if (!legalName.trim() || legalName.trim().length < 3) return toast.error("Legal Full Name is required and must match your bank account");
     if (!/^Nurse[A-Za-z0-9_]{2,20}$/.test(username)) return toast.error("Username must start with 'Nurse' and contain 2–20 letters/digits after");
     if (!examDate) return toast.error("Exam date required");
 
@@ -40,6 +42,7 @@ function Onboarding() {
     const { error } = await supabase.from("profiles").update({
       first_name: first.trim(),
       last_name: last.trim(),
+      legal_full_name: legalName.trim(),
       username,
       exam_date: examDate,
       exam_preference: pref,
