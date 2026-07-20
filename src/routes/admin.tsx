@@ -407,6 +407,7 @@ function UsersTab() {
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="text-sm">
                 <p className="font-medium">{u.username ?? "—"} <span className="text-muted-foreground">({u.email})</span></p>
+                <p className="text-xs"><span className="text-muted-foreground">Legal Name:</span> <strong>{u.legal_full_name ?? "— not provided —"}</strong></p>
                 <p className="text-xs text-muted-foreground">
                   <Badge variant="secondary" className="mr-1">{u.tier}</Badge>
                   {u.expiry_date && `expires ${new Date(u.expiry_date).toLocaleDateString()}`}
