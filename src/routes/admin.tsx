@@ -244,49 +244,103 @@ Explanation: The normal adult resting heart rate ranges from 60 to 100 bpm.`}</p
   );
 }
 
-interface ReceiptRow { id: string; user_id: string; file_path: string; amount: number | null; target_tier: string; status: string; created_at: string; }
+interface ReceiptRow {
+  id: string; user_id: string; file_path: string; amount: number | null;
+  target_tier: string; status: string; created_at: string;
+  auto_approved?: boolean; flag_reason?: string | null;
+  profile?: { username: string | null; email: string | null; legal_full_name: string | null; tier: string } | null;
+}
 
 function PaymentsTab() {
   const [rows, setRows] = useState<ReceiptRow[]>([]);
+  const [urls, setUrls] = useState<Record<string, string>>({});
+
   const load = async () => {
     const { data } = await supabase.from("payment_receipts").select("*").order("created_at", { ascending: false });
-    setRows((data as ReceiptRow[]) ?? []);
+    const list = (data as ReceiptRow[]) ?? [];
+    // Fetch profile info for each unique user
+    const userIds = Array.from(new Set(list.map(r => r.user_id)));
+    if (userIds.length) {
+      const { data: profs } = await supabase.from("profiles")
+        .select("id, username, email, legal_full_name, tier")
+        .in("id", userIds);
+      const byId = new Map((profs ?? []).map(p => [p.id, p]));
+      list.forEach(r => { r.profile = byId.get(r.user_id) as ReceiptRow["profile"]; });
+    }
+    setRows(list);
+
+    // Pre-sign URLs so images render inline
+    const entries: Record<string, string> = {};
+    await Promise.all(list.map(async r => {
+      const { data: s } = await supabase.storage.from("receipts").createSignedUrl(r.file_path, 3600);
+      if (s?.signedUrl) entries[r.id] = s.signedUrl;
+    }));
+    setUrls(entries);
   };
   useEffect(() => { load(); }, []);
 
-  const view = async (path: string) => {
-    const { data } = await supabase.storage.from("receipts").createSignedUrl(path, 60);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
-  };
-  const approve = async (id: string) => {
-    const { error } = await supabase.rpc("approve_receipt", { _receipt_id: id });
+  const revoke = async (r: ReceiptRow) => {
+    if (!confirm(`Revoke upgrade for ${r.profile?.username ?? r.user_id.slice(0,8)}? This reverts them to Novice.`)) return;
+    const { error } = await supabase.rpc("flag_receipt_and_revoke", {
+      _receipt_id: r.id, _reason: "Admin manual review — receipt flagged as fake or edited.",
+    });
     if (error) return toast.error(error.message);
-    toast.success("Approved");
+    toast.success("Upgrade revoked; user reverted to Novice");
     load();
   };
-  const reject = async (id: string) => {
-    const { error } = await supabase.from("payment_receipts").update({ status: "rejected", reviewed_at: new Date().toISOString() }).eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Rejected");
-    load();
+
+  const isImage = (path: string) => /\.(jpe?g|png|webp|gif|bmp|heic)$/i.test(path);
+
+  const statusBadge = (r: ReceiptRow) => {
+    if (r.status === "approved" && r.auto_approved) return <Badge className="bg-success text-success-foreground">automatically_approved</Badge>;
+    if (r.status === "approved") return <Badge className="bg-success text-success-foreground">approved</Badge>;
+    if (r.status === "rejected") return <Badge variant="destructive">{r.flag_reason ? "flagged" : "rejected"}</Badge>;
+    return <Badge>{r.status}</Badge>;
   };
 
   return (
     <Card className="p-4 mt-4 divide-y">
       {rows.length === 0 && <p className="p-6 text-center text-muted-foreground text-sm">No receipts.</p>}
       {rows.map(r => (
-        <div key={r.id} className="py-3 flex items-center justify-between gap-3 flex-wrap">
-          <div className="text-sm">
-            <p className="font-medium">{r.target_tier} • ₦{r.amount?.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">User: {r.user_id.slice(0,8)} · {new Date(r.created_at).toLocaleString()}</p>
+        <div key={r.id} className="py-4 grid md:grid-cols-[220px_1fr] gap-4">
+          <div>
+            {urls[r.id] && isImage(r.file_path) ? (
+              <a href={urls[r.id]} target="_blank" rel="noreferrer">
+                <img src={urls[r.id]} alt="receipt" className="w-full h-40 object-cover rounded border" />
+              </a>
+            ) : urls[r.id] ? (
+              <a href={urls[r.id]} target="_blank" rel="noreferrer"
+                className="flex items-center justify-center h-40 rounded border bg-muted text-xs text-muted-foreground">
+                Open file
+              </a>
+            ) : (
+              <div className="h-40 rounded border bg-muted animate-pulse" />
+            )}
           </div>
-          <div className="flex gap-2 items-center">
-            <Badge>{r.status}</Badge>
-            <Button size="sm" variant="outline" onClick={() => view(r.file_path)}>View</Button>
-            {r.status === "pending" && <>
-              <Button size="sm" className="bg-success text-success-foreground" onClick={() => approve(r.id)}>Approve</Button>
-              <Button size="sm" variant="destructive" onClick={() => reject(r.id)}>Reject</Button>
-            </>}
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="text-sm">
+                <p className="font-semibold">{r.target_tier} • ₦{r.amount?.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">
+                  {r.profile?.username ?? "—"} · {r.profile?.email ?? r.user_id.slice(0,8)}
+                </p>
+                <p className="text-xs">
+                  <span className="text-muted-foreground">Legal Name:</span>{" "}
+                  <strong>{r.profile?.legal_full_name ?? "— not provided —"}</strong>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Current tier: <Badge variant="secondary">{r.profile?.tier ?? "?"}</Badge> ·
+                  Submitted {new Date(r.created_at).toLocaleString()}
+                </p>
+                {r.flag_reason && <p className="text-xs text-destructive mt-1">⚠ {r.flag_reason}</p>}
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                {statusBadge(r)}
+                {r.status !== "rejected" && (
+                  <Button size="sm" variant="destructive" onClick={() => revoke(r)}>Revoke Upgrade</Button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       ))}
