@@ -348,7 +348,7 @@ function PaymentsTab() {
   );
 }
 
-interface UserRow { id: string; email: string | null; username: string | null; tier: string; expiry_date: string | null; }
+interface UserRow { id: string; email: string | null; username: string | null; legal_full_name: string | null; tier: string; expiry_date: string | null; }
 
 function UsersTab() {
   const [rows, setRows] = useState<UserRow[]>([]);
@@ -359,7 +359,7 @@ function UsersTab() {
   const [assignDays, setAssignDays] = useState<number>(30);
 
   const load = async () => {
-    const { data } = await supabase.from("profiles").select("id, email, username, tier, expiry_date");
+    const { data } = await supabase.from("profiles").select("id, email, username, legal_full_name, tier, expiry_date");
     setRows((data as UserRow[]) ?? []);
     const { data: ex } = await supabase.from("exams").select("user_id, score_pct").eq("status", "completed").not("score_pct", "is", null);
     const agg: Record<string, { sum: number; n: number }> = {};
