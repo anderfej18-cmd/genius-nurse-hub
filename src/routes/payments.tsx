@@ -56,9 +56,34 @@ function Payments() {
   const upload = async () => {
     if (!user || !file || !settings) return;
     setBusy(true);
-    const path = `${user.id}/${Date.now()}-${file.name}`;
-    const { error: upErr } = await supabase.storage.from("receipts").upload(path, file);
-    if (upErr) { setBusy(false); return toast.error(upErr.message); }
+
+    // Make sure the session is still valid — an expired session makes storage
+    // uploads fail with a confusing permission error.
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      setBusy(false);
+      toast.error("Your session expired. Please sign in again.");
+      navigate({ to: "/auth" });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setBusy(false);
+      return toast.error("File is too large. Please upload an image under 10MB.");
+    }
+
+    // Sanitise the filename: spaces/parentheses/unicode break storage keys.
+    const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const safeName = `${Date.now()}-receipt.${ext || "jpg"}`;
+    const path = `${sessionData.session.user.id}/${safeName}`;
+
+    const { error: upErr } = await supabase.storage
+      .from("receipts")
+      .upload(path, file, { contentType: file.type || "image/jpeg", upsert: false });
+    if (upErr) {
+      setBusy(false);
+      return toast.error(`Upload failed: ${upErr.message}`);
+    }
     const amount = tier === "erudite" ? settings.erudite_price : settings.scholar_price;
 
     // Instant upgrade + auto-approved receipt row
