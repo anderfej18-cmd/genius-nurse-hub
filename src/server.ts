@@ -66,6 +66,22 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   return brandedErrorResponse();
 }
 
+// A client that navigates away / reloads mid-request kills the socket. Node
+// surfaces that as `Error: aborted` (ECONNRESET) — it is not an app error.
+function isClientAbortError(error: unknown): boolean {
+  const candidates = [error, (error as { cause?: unknown } | null)?.cause];
+  return candidates.some((candidate) => {
+    if (!candidate || typeof candidate !== "object") return false;
+    const e = candidate as { code?: unknown; message?: unknown; name?: unknown };
+    return (
+      e.code === "ECONNRESET" ||
+      e.name === "AbortError" ||
+      e.message === "aborted" ||
+      e.message === "The operation was aborted."
+    );
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
@@ -73,8 +89,12 @@ export default {
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
+      if (isClientAbortError(error) || request.signal?.aborted) {
+        return new Response(null, { status: 499 });
+      }
       console.error(error);
       return brandedErrorResponse();
     }
   },
 };
+
