@@ -62,8 +62,30 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
     return response;
   }
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
+  const captured = consumeLastCapturedError();
+  if (isClientAbortError(captured)) {
+    // Client went away mid-render; nothing to report and nobody to render for.
+    return new Response(null, { status: 499 });
+  }
+
+  console.error(captured ?? new Error(`h3 swallowed SSR error: ${body}`));
   return brandedErrorResponse();
+}
+
+// A client that navigates away / reloads mid-request kills the socket. Node
+// surfaces that as `Error: aborted` (ECONNRESET) — it is not an app error.
+function isClientAbortError(error: unknown): boolean {
+  const candidates = [error, (error as { cause?: unknown } | null)?.cause];
+  return candidates.some((candidate) => {
+    if (!candidate || typeof candidate !== "object") return false;
+    const e = candidate as { code?: unknown; message?: unknown; name?: unknown };
+    return (
+      e.code === "ECONNRESET" ||
+      e.name === "AbortError" ||
+      e.message === "aborted" ||
+      e.message === "The operation was aborted."
+    );
+  });
 }
 
 export default {
@@ -73,8 +95,12 @@ export default {
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
+      if (isClientAbortError(error) || request.signal?.aborted) {
+        return new Response(null, { status: 499 });
+      }
       console.error(error);
       return brandedErrorResponse();
     }
   },
 };
+
