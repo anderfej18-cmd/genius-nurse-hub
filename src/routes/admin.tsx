@@ -329,16 +329,16 @@ function PaymentsTab() {
                 View
               </Button>
               <Button size="sm" variant="outline" className="flex-1" disabled={!urls[r.id]}
-                onClick={async () => {
-                  const { data, error } = await supabase.storage.from("receipts").download(r.file_path);
-                  if (error || !data) return toast.error("Download failed");
-                  const href = URL.createObjectURL(data);
+                onClick={() => {
+                  const href = urls[r.id];
+                  if (!href) return toast.error("Receipt not ready yet");
                   const a = document.createElement("a");
                   a.href = href; a.download = r.file_path.split("/").pop() ?? "receipt";
-                  a.click(); URL.revokeObjectURL(href);
+                  a.click();
                 }}>
                 Download
               </Button>
+
             </div>
           </div>
           <div className="space-y-2">
