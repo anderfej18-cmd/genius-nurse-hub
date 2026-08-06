@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { LeaderboardTable } from "@/components/LeaderboardTable";
+import { fetchTopics } from "@/lib/topics";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/admin")({ component: Admin });
@@ -150,8 +151,8 @@ function QuestionsTab() {
     if (error) return toast.error(error.message);
     toast.success(`Imported ${rows.length} questions into ${examType} · ${activeSub}`);
     setCount(c => (c ?? 0) + rows.length);
-    loadSubs(examType);
     if (subMode === "new") { setSubExisting(subNew.trim()); setSubNew(""); setSubMode("existing"); }
+    await loadSubs(examType);
   };
 
   return (
