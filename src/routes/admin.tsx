@@ -255,6 +255,7 @@ interface ReceiptRow {
 function PaymentsTab() {
   const [rows, setRows] = useState<ReceiptRow[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
+  const [viewing, setViewing] = useState<ReceiptRow | null>(null);
 
   const load = async () => {
     const { data } = await supabase.from("payment_receipts").select("*").order("created_at", { ascending: false });
