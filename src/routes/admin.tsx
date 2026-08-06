@@ -305,19 +305,35 @@ function PaymentsTab() {
       {rows.length === 0 && <p className="p-6 text-center text-muted-foreground text-sm">No receipts.</p>}
       {rows.map(r => (
         <div key={r.id} className="py-4 grid md:grid-cols-[220px_1fr] gap-4">
-          <div>
-            {urls[r.id] && isImage(r.file_path) ? (
-              <a href={urls[r.id]} target="_blank" rel="noreferrer">
-                <img src={urls[r.id]} alt="receipt" className="w-full h-40 object-cover rounded border" />
-              </a>
-            ) : urls[r.id] ? (
-              <a href={urls[r.id]} target="_blank" rel="noreferrer"
-                className="flex items-center justify-center h-40 rounded border bg-muted text-xs text-muted-foreground">
-                Open file
-              </a>
-            ) : (
+          <div className="space-y-2">
+            {!urls[r.id] ? (
               <div className="h-40 rounded border bg-muted animate-pulse" />
+            ) : isImage(r.file_path) ? (
+              <button type="button" onClick={() => setViewing(r)} className="block w-full">
+                <img src={urls[r.id]} alt="receipt" className="w-full h-40 object-cover rounded border" />
+              </button>
+            ) : (
+              <button type="button" onClick={() => setViewing(r)}
+                className="flex w-full items-center justify-center h-40 rounded border bg-muted text-xs text-muted-foreground">
+                📄 View receipt ({r.file_path.split(".").pop()?.toUpperCase()})
+              </button>
             )}
+            <div className="flex gap-2">
+              <Button size="sm" variant="secondary" className="flex-1" onClick={() => setViewing(r)} disabled={!urls[r.id]}>
+                View
+              </Button>
+              <Button size="sm" variant="outline" className="flex-1" disabled={!urls[r.id]}
+                onClick={async () => {
+                  const { data, error } = await supabase.storage.from("receipts").download(r.file_path);
+                  if (error || !data) return toast.error("Download failed");
+                  const href = URL.createObjectURL(data);
+                  const a = document.createElement("a");
+                  a.href = href; a.download = r.file_path.split("/").pop() ?? "receipt";
+                  a.click(); URL.revokeObjectURL(href);
+                }}>
+                Download
+              </Button>
+            </div>
           </div>
           <div className="space-y-2">
             <div className="flex items-start justify-between gap-3 flex-wrap">
