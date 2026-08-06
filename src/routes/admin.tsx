@@ -362,6 +362,22 @@ function PaymentsTab() {
           </div>
         </div>
       ))}
+      <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              Receipt — {viewing?.profile?.legal_full_name ?? viewing?.profile?.username ?? "user"}
+            </DialogTitle>
+          </DialogHeader>
+          {viewing && urls[viewing.id] && (
+            isImage(viewing.file_path) ? (
+              <img src={urls[viewing.id]} alt="receipt" className="w-full max-h-[70vh] object-contain rounded" />
+            ) : (
+              <iframe src={urls[viewing.id]} title="receipt" className="w-full h-[70vh] rounded border" />
+            )
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
