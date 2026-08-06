@@ -374,14 +374,20 @@ function PaymentsTab() {
             <DialogTitle>
               Receipt — {viewing?.profile?.legal_full_name ?? viewing?.profile?.username ?? "user"}
             </DialogTitle>
+            <DialogDescription>Submitted receipt preview.</DialogDescription>
           </DialogHeader>
           {viewing && urls[viewing.id] && (
             isImage(viewing.file_path) ? (
               <img src={urls[viewing.id]} alt="receipt" className="w-full max-h-[70vh] object-contain rounded" />
             ) : (
-              <iframe src={urls[viewing.id]} title="receipt" className="w-full h-[70vh] rounded border" />
+              <object data={urls[viewing.id]} type="application/pdf" className="w-full h-[70vh] rounded border">
+                <p className="p-4 text-sm text-muted-foreground">
+                  Inline preview unavailable — use the Download button to open this receipt.
+                </p>
+              </object>
             )
           )}
+
         </DialogContent>
       </Dialog>
     </Card>
