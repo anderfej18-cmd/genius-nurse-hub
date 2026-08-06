@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { LeaderboardTable } from "@/components/LeaderboardTable";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/admin")({ component: Admin });
 
@@ -254,6 +254,8 @@ interface ReceiptRow {
 
 function PaymentsTab() {
   const [rows, setRows] = useState<ReceiptRow[]>([]);
+  // Blob object URLs (same-origin) — signed storage URLs get blocked by Chrome
+  // when embedded in an iframe/img inside the preview frame.
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [viewing, setViewing] = useState<ReceiptRow | null>(null);
 
@@ -271,15 +273,19 @@ function PaymentsTab() {
     }
     setRows(list);
 
-    // Pre-sign URLs so images render inline
+    // Download each file and expose it as a local blob URL so it renders inline.
     const entries: Record<string, string> = {};
     await Promise.all(list.map(async r => {
-      const { data: s } = await supabase.storage.from("receipts").createSignedUrl(r.file_path, 3600);
-      if (s?.signedUrl) entries[r.id] = s.signedUrl;
+      const { data: blob } = await supabase.storage.from("receipts").download(r.file_path);
+      if (blob) entries[r.id] = URL.createObjectURL(blob);
     }));
-    setUrls(entries);
+    setUrls(prev => {
+      Object.values(prev).forEach(u => URL.revokeObjectURL(u));
+      return entries;
+    });
   };
   useEffect(() => { load(); }, []);
+
 
   const revoke = async (r: ReceiptRow) => {
     if (!confirm(`Revoke upgrade for ${r.profile?.username ?? r.user_id.slice(0,8)}? This reverts them to Novice.`)) return;
@@ -323,16 +329,16 @@ function PaymentsTab() {
                 View
               </Button>
               <Button size="sm" variant="outline" className="flex-1" disabled={!urls[r.id]}
-                onClick={async () => {
-                  const { data, error } = await supabase.storage.from("receipts").download(r.file_path);
-                  if (error || !data) return toast.error("Download failed");
-                  const href = URL.createObjectURL(data);
+                onClick={() => {
+                  const href = urls[r.id];
+                  if (!href) return toast.error("Receipt not ready yet");
                   const a = document.createElement("a");
                   a.href = href; a.download = r.file_path.split("/").pop() ?? "receipt";
-                  a.click(); URL.revokeObjectURL(href);
+                  a.click();
                 }}>
                 Download
               </Button>
+
             </div>
           </div>
           <div className="space-y-2">
@@ -368,14 +374,20 @@ function PaymentsTab() {
             <DialogTitle>
               Receipt — {viewing?.profile?.legal_full_name ?? viewing?.profile?.username ?? "user"}
             </DialogTitle>
+            <DialogDescription>Submitted receipt preview.</DialogDescription>
           </DialogHeader>
           {viewing && urls[viewing.id] && (
             isImage(viewing.file_path) ? (
               <img src={urls[viewing.id]} alt="receipt" className="w-full max-h-[70vh] object-contain rounded" />
             ) : (
-              <iframe src={urls[viewing.id]} title="receipt" className="w-full h-[70vh] rounded border" />
+              <object data={urls[viewing.id]} type="application/pdf" className="w-full h-[70vh] rounded border">
+                <p className="p-4 text-sm text-muted-foreground">
+                  Inline preview unavailable — use the Download button to open this receipt.
+                </p>
+              </object>
             )
           )}
+
         </DialogContent>
       </Dialog>
     </Card>
