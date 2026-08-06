@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useAuth, TIER_LABEL } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Activity, LogOut, Menu, X, Trophy } from "lucide-react";
+import { Brain, LogOut, Menu, X, Trophy } from "lucide-react";
+
 
 export function AppHeader() {
   const { user, profile, isAdmin, signOut } = useAuth();
@@ -39,10 +40,11 @@ export function AppHeader() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-2">
           <div className="h-9 w-9 rounded-lg bg-hero shadow-glow flex items-center justify-center">
-            <Activity className="h-5 w-5 text-primary-foreground" />
+            <Brain className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="font-bold text-lg tracking-tight">NurseGenius</span>
         </Link>
+
 
         {showNav && (
           <nav className="hidden md:flex items-center gap-1">
