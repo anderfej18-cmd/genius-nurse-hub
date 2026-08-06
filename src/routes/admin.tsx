@@ -115,11 +115,11 @@ function QuestionsTab() {
   const activeSub = (subMode === "new" ? subNew : subExisting).trim() || "General";
 
   const loadSubs = async (et: "RN" | "RM") => {
-    const { data } = await supabase.from("questions").select("topic").eq("exam_type", et);
-    const uniq = Array.from(new Set((data ?? []).map(r => r.topic).filter(Boolean))).sort();
+    const uniq = await fetchTopics(et);
     setExistingSubs(uniq);
     if (uniq.length && !subExisting) setSubExisting(uniq[0]);
   };
+
 
   useEffect(() => {
     supabase.from("questions").select("id", { count: "exact", head: true }).then(r => setCount(r.count ?? 0));
