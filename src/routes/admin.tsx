@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { LeaderboardTable } from "@/components/LeaderboardTable";
-import { fetchTopics } from "@/lib/topics";
+import { fetchTopicCounts } from "@/lib/topics";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/admin")({ component: Admin });
@@ -100,6 +100,16 @@ function parseTxt(raw: string): ParsedQ[] {
   return out;
 }
 
+interface LastUpload {
+  fileName: string;
+  examType: string;
+  topic: string;
+  imported: number;
+  at: string;
+}
+
+const LAST_UPLOAD_KEY = "ng.lastQuestionUpload";
+
 function QuestionsTab() {
   const [examType, setExamType] = useState<"RN" | "RM">("RN");
   const [existingSubs, setExistingSubs] = useState<string[]>([]);
@@ -112,18 +122,32 @@ function QuestionsTab() {
   const [ans, setAns] = useState<"A" | "B" | "C" | "D">("A");
   const [rationale, setRationale] = useState("");
   const [count, setCount] = useState<number | null>(null);
+  const [rnCounts, setRnCounts] = useState<Record<string, number>>({});
+  const [rmCounts, setRmCounts] = useState<Record<string, number>>({});
+  const [lastUpload, setLastUpload] = useState<LastUpload | null>(null);
 
   const activeSub = (subMode === "new" ? subNew : subExisting).trim() || "General";
 
   const loadSubs = async (et: "RN" | "RM") => {
-    const uniq = await fetchTopics(et);
+    const counts = await fetchTopicCounts(et);
+    if (et === "RN") setRnCounts(counts); else setRmCounts(counts);
+    const uniq = Object.keys(counts).sort();
     setExistingSubs(uniq);
     if (uniq.length && !subExisting) setSubExisting(uniq[0]);
   };
 
+  const loadAllCounts = async () => {
+    const [rn, rm] = await Promise.all([fetchTopicCounts("RN"), fetchTopicCounts("RM")]);
+    setRnCounts(rn); setRmCounts(rm);
+  };
 
   useEffect(() => {
     supabase.from("questions").select("id", { count: "exact", head: true }).then(r => setCount(r.count ?? 0));
+    loadAllCounts();
+    try {
+      const raw = localStorage.getItem(LAST_UPLOAD_KEY);
+      if (raw) setLastUpload(JSON.parse(raw) as LastUpload);
+    } catch { /* ignore corrupt cache */ }
   }, []);
   useEffect(() => { loadSubs(examType); /* eslint-disable-next-line */ }, [examType]);
 
@@ -146,20 +170,80 @@ function QuestionsTab() {
     const raw = await file.text();
     const parsed = parseTxt(raw);
     if (parsed.length === 0) return toast.error("No valid questions found in file. Check the format.");
-    const rows = parsed.map(p => ({ exam_type: examType, topic: activeSub, ...p }));
+    const target = activeSub;
+    const rows = parsed.map(p => ({ exam_type: examType, topic: target, ...p }));
     const { error } = await supabase.from("questions").insert(rows);
     if (error) return toast.error(error.message);
-    toast.success(`Imported ${rows.length} questions into ${examType} · ${activeSub}`);
+    toast.success(`Imported ${rows.length} questions into ${examType} · ${target}`);
     setCount(c => (c ?? 0) + rows.length);
-    if (subMode === "new") { setSubExisting(subNew.trim()); setSubNew(""); setSubMode("existing"); }
+
+    const record: LastUpload = {
+      fileName: file.name,
+      examType,
+      topic: target,
+      imported: rows.length,
+      at: new Date().toISOString(),
+    };
+    setLastUpload(record);
+    try { localStorage.setItem(LAST_UPLOAD_KEY, JSON.stringify(record)); } catch { /* ignore */ }
+
+    if (subMode === "new") { setSubExisting(target); setSubNew(""); setSubMode("existing"); }
     await loadSubs(examType);
+  };
+
+  const renderBreakdown = (label: string, counts: Record<string, number>) => {
+    const entries = Object.entries(counts).sort((x, y) => y[1] - x[1]);
+    const total = entries.reduce((s, [, n]) => s + n, 0);
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-sm font-semibold">
+          <span>{label}</span>
+          <span>{total.toLocaleString()}</span>
+        </div>
+        {entries.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No questions yet.</p>
+        ) : (
+          <div className="divide-y">
+            {entries.map(([topic, n]) => (
+              <div key={topic} className="flex items-center justify-between py-1.5 text-sm">
+                <span className="text-muted-foreground truncate pr-2">{topic}</span>
+                <span className="font-mono">{n.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
     <div className="space-y-4 mt-4">
-      <Card className="p-5">
-        <p className="text-sm text-muted-foreground">Total questions in bank: <strong className="text-foreground">{count ?? "…"}</strong></p>
+      <Card className="p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Total questions in bank: <strong className="text-foreground">{count ?? "…"}</strong></p>
+          <Button variant="outline" size="sm" onClick={loadAllCounts}>Refresh counts</Button>
+        </div>
+        <div className="grid md:grid-cols-2 gap-5">
+          {renderBreakdown("RN — Registered Nurse", rnCounts)}
+          {renderBreakdown("RM — Registered Midwife", rmCounts)}
+        </div>
       </Card>
+
+      <Card className="p-5">
+        <h3 className="font-semibold mb-2 text-sm">Last TXT Upload</h3>
+        {lastUpload ? (
+          <div className="text-sm space-y-1">
+            <p className="font-medium break-all">{lastUpload.fileName}</p>
+            <p className="text-muted-foreground">
+              {lastUpload.imported} questions → <strong className="text-foreground">{lastUpload.examType}</strong> · <strong className="text-foreground">{lastUpload.topic}</strong>
+            </p>
+            <p className="text-xs text-muted-foreground">{new Date(lastUpload.at).toLocaleString()}</p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">No upload recorded on this device yet.</p>
+        )}
+      </Card>
+
 
       <Card className="p-5 space-y-4">
         <h3 className="font-semibold">Bulk TXT Upload</h3>
