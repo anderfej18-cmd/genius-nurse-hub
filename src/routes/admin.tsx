@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { LeaderboardTable } from "@/components/LeaderboardTable";
-import { fetchTopics } from "@/lib/topics";
+import { fetchTopicCounts } from "@/lib/topics";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/admin")({ component: Admin });
