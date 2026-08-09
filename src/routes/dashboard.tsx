@@ -21,7 +21,7 @@ interface ExamRow {
 }
 
 function Dashboard() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, refresh } = useAuth();
   const navigate = useNavigate();
   const [exams, setExams] = useState<ExamRow[]>([]);
   const [topicStats, setTopicStats] = useState<{ topic: string; correct: number; total: number }[]>([]);
