@@ -13,11 +13,13 @@ import { fetchTopics } from "@/lib/topics";
 
 export const Route = createFileRoute("/exam/start")({ component: ExamStart });
 
+const ALL_AREAS = "All Areas";
+
 function ExamStart() {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
   const [examType, setExamType] = useState<"RN" | "RM">("RN");
-  const [category, setCategory] = useState("General");
+  const [category, setCategory] = useState(ALL_AREAS);
   const [topics, setTopics] = useState<string[]>([]);
   const [count, setCount] = useState(50);
   const [minutes, setMinutes] = useState(60);
