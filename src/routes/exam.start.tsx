@@ -58,7 +58,7 @@ function ExamStart() {
 
     setBusy(true);
     let q = supabase.from("questions").select("id").eq("exam_type", examType);
-    if (category !== "General") q = q.eq("topic", category);
+    if (category !== ALL_AREAS) q = q.eq("topic", category);
     const { data: pool, error: e1 } = await q;
     if (e1 || !pool || pool.length === 0) {
       setBusy(false);
