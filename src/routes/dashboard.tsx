@@ -57,6 +57,32 @@ function Dashboard() {
     })();
   }, [user]);
 
+  // Keep the daily question counter live: realtime profile updates + focus/interval refresh
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`profile-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` },
+        () => { refresh(); },
+      )
+      .subscribe();
+
+    const onVisible = () => { if (document.visibilityState === "visible") refresh(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    const interval = window.setInterval(() => { refresh(); }, 30000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      window.clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   if (loading || !profile) return <><AppHeader /><div className="p-12 text-center text-muted-foreground">Loading…</div></>;
 
   const dailyLimit = TIER_DAILY_LIMIT[profile.tier];
