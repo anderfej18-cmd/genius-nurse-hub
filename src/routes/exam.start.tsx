@@ -13,11 +13,13 @@ import { fetchTopics } from "@/lib/topics";
 
 export const Route = createFileRoute("/exam/start")({ component: ExamStart });
 
+const ALL_AREAS = "All Areas";
+
 function ExamStart() {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
   const [examType, setExamType] = useState<"RN" | "RM">("RN");
-  const [category, setCategory] = useState("General");
+  const [category, setCategory] = useState(ALL_AREAS);
   const [topics, setTopics] = useState<string[]>([]);
   const [count, setCount] = useState(50);
   const [minutes, setMinutes] = useState(60);
@@ -55,10 +57,20 @@ function ExamStart() {
     }
 
     setBusy(true);
-    let q = supabase.from("questions").select("id").eq("exam_type", examType);
-    if (category !== "General") q = q.eq("topic", category);
-    const { data: pool, error: e1 } = await q;
-    if (e1 || !pool || pool.length === 0) {
+    // Page through the bank so "All Areas" draws from every subcategory,
+    // not just the first 1000 rows the API returns per request.
+    const PAGE = 1000;
+    const pool: { id: string }[] = [];
+    let e1: unknown = null;
+    for (let from = 0; ; from += PAGE) {
+      let q = supabase.from("questions").select("id").eq("exam_type", examType);
+      if (category !== ALL_AREAS) q = q.eq("topic", category);
+      const { data, error } = await q.range(from, from + PAGE - 1);
+      if (error) { e1 = error; break; }
+      pool.push(...(data ?? []));
+      if (!data || data.length < PAGE) break;
+    }
+    if (e1 || pool.length === 0) {
       setBusy(false);
       return toast.error("No questions available for this selection. Ask an admin to upload some.");
     }
@@ -106,7 +118,7 @@ function ExamStart() {
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="General">All Topics</SelectItem>
+                <SelectItem value={ALL_AREAS}>All Areas</SelectItem>
                 {topics.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
