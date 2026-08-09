@@ -126,7 +126,7 @@ function QuestionsTab() {
   const [rmCounts, setRmCounts] = useState<Record<string, number>>({});
   const [lastUpload, setLastUpload] = useState<LastUpload | null>(null);
 
-  const activeSub = (subMode === "new" ? subNew : subExisting).trim() || "General";
+  const activeSub = (subMode === "new" ? subNew : subExisting).trim();
 
   const loadSubs = async (et: "RN" | "RM") => {
     const counts = await fetchTopicCounts(et);
@@ -153,6 +153,7 @@ function QuestionsTab() {
 
   const addOne = async () => {
     if (!text || !a || !b || !c || !d) return toast.error("All fields required");
+    if (!activeSub) return toast.error("Pick or enter a subcategory first");
     const { error } = await supabase.from("questions").insert({
       exam_type: examType, topic: activeSub, question_text: text,
       option_a: a, option_b: b, option_c: c, option_d: d,
@@ -166,7 +167,7 @@ function QuestionsTab() {
   };
 
   const uploadTXT = async (file: File) => {
-    if (subMode === "new" && !subNew.trim()) return toast.error("Enter a new subcategory name first");
+    if (!activeSub) return toast.error("Pick or enter a subcategory first");
     const raw = await file.text();
     const parsed = parseTxt(raw);
     if (parsed.length === 0) return toast.error("No valid questions found in file. Check the format.");

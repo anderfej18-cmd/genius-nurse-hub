@@ -106,7 +106,7 @@ function ExamStart() {
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="General">All Topics</SelectItem>
+                <SelectItem value={ALL_AREAS}>All Areas</SelectItem>
                 {topics.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
