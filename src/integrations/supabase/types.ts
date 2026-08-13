@@ -218,6 +218,36 @@ export type Database = {
         }
         Relationships: []
       }
+      plans: {
+        Row: {
+          created_at: string
+          duration_days: number
+          id: string
+          is_active: boolean
+          name: string
+          price_ngn: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          price_ngn?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_ngn?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -352,6 +382,36 @@ export type Database = {
           },
         ]
       }
+      subscription_payments: {
+        Row: {
+          amount_ngn: number
+          created_at: string
+          duration_days: number
+          id: string
+          plan_name: string
+          reference: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_ngn: number
+          created_at?: string
+          duration_days: number
+          id?: string
+          plan_name: string
+          reference?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_ngn?: number
+          created_at?: string
+          duration_days?: number
+          id?: string
+          plan_name?: string
+          reference?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -378,6 +438,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_subscription: {
+        Args: {
+          _amount: number
+          _reference: string
+          _tier: Database["public"]["Enums"]["user_tier"]
+        }
+        Returns: string
+      }
       approve_receipt: { Args: { _receipt_id: string }; Returns: undefined }
       assign_user_tier: {
         Args: {
