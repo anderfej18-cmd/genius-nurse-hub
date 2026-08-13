@@ -1,197 +1,171 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Check } from "lucide-react";
 import { toast } from "sonner";
-import { verifyReceipt } from "@/lib/receipts.functions";
+import { loadPaystack, PAYSTACK_PUBLIC_KEY } from "@/lib/paystack";
 
-export const Route = createFileRoute("/payments")({ component: Payments });
+export const Route = createFileRoute("/payments")({
+  component: Payments,
+  head: () => ({
+    meta: [
+      { title: "Upgrade Your Plan — NurseGenius" },
+      { name: "description", content: "Upgrade to Erudite or Scholar with secure Paystack checkout and unlock more daily RN & RM practice questions." },
+      { property: "og:title", content: "Upgrade Your Plan — NurseGenius" },
+      { property: "og:description", content: "Secure Paystack checkout for Erudite and Scholar access on NurseGenius." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+});
 
-interface Settings {
-  erudite_price: number; scholar_price: number;
-  erudite_days: number; scholar_days: number;
-  bank_name: string; bank_account: string; bank_account_name: string;
+interface Plan {
+  id: string;
+  name: string;
+  price_ngn: number;
+  duration_days: number;
+  is_active: boolean;
 }
 
-interface Receipt {
-  id: string; status: string; target_tier: string; amount: number | null; created_at: string;
+interface PaymentRow {
+  id: string; plan_name: string; amount_ngn: number; duration_days: number; created_at: string;
 }
+
+const PERKS: Record<string, string> = {
+  erudite: "500 questions/day • 150 per session • Full AI explanations",
+  scholar: "Unlimited daily questions • 250 per session • Full AI explanations",
+};
 
 function Payments() {
-  const { user, loading } = useAuth();
+  const { user, profile, loading, refresh } = useAuth();
   const navigate = useNavigate();
-  const [settings, setSettings] = useState<Settings | null>(null);
-  const [tier, setTier] = useState<"erudite" | "scholar">("erudite");
-  const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [copied, setCopied] = useState(false);
+  const [plans, setPlans] = useState<Plan[] | null>(null);
+  const [history, setHistory] = useState<PaymentRow[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [loading, user, navigate]);
 
+  const loadHistory = async (uid: string) => {
+    const { data } = await supabase.from("subscription_payments")
+      .select("id, plan_name, amount_ngn, duration_days, created_at")
+      .eq("user_id", uid).order("created_at", { ascending: false });
+    setHistory((data as PaymentRow[]) ?? []);
+  };
+
   useEffect(() => {
     (async () => {
-      const { data: s } = await supabase.from("app_settings").select("*").eq("id", 1).single();
-      setSettings(s as Settings);
-      if (user) {
-        const { data: r } = await supabase.from("payment_receipts")
-          .select("id, status, target_tier, amount, created_at")
-          .eq("user_id", user.id).order("created_at", { ascending: false });
-        setReceipts((r as Receipt[]) ?? []);
-      }
+      const { data } = await supabase.from("plans")
+        .select("id, name, price_ngn, duration_days, is_active")
+        .eq("is_active", true).order("price_ngn");
+      setPlans((data as Plan[]) ?? []);
+      if (user) await loadHistory(user.id);
     })();
   }, [user]);
 
-  const verifyFn = useServerFn(verifyReceipt);
-
-  const upload = async () => {
-    if (!user || !file || !settings) return;
-    setBusy(true);
-
-    // Make sure the session is still valid — an expired session makes storage
-    // uploads fail with a confusing permission error.
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session) {
-      setBusy(false);
-      toast.error("Your session expired. Please sign in again.");
-      navigate({ to: "/auth" });
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      setBusy(false);
-      return toast.error("File is too large. Please upload an image under 10MB.");
-    }
-
-    // Sanitise the filename: spaces/parentheses/unicode break storage keys.
-    const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
-    const safeName = `${Date.now()}-receipt.${ext || "jpg"}`;
-    const path = `${sessionData.session.user.id}/${safeName}`;
-
-    const { error: upErr } = await supabase.storage
-      .from("receipts")
-      .upload(path, file, { contentType: file.type || "image/jpeg", upsert: false });
-    if (upErr) {
-      setBusy(false);
-      return toast.error(`Upload failed: ${upErr.message}`);
-    }
-    const amount = tier === "erudite" ? settings.erudite_price : settings.scholar_price;
-
-    // Instant upgrade + auto-approved receipt row
-    const { data: receiptId, error } = await supabase.rpc("auto_upgrade_from_receipt", {
-      _file_path: path, _tier: tier, _amount: amount,
-    });
-    if (error) { setBusy(false); return toast.error(error.message); }
-
-    toast.success("Upgrade activated! Verifying receipt in background…");
-    setFile(null);
-
-    // Kick off server-side OCR + duplicate/amount guard
-    verifyFn({ data: { receiptId: receiptId as unknown as string } })
-      .then((res) => {
-        if (!res.ok) {
-          if (res.reason === "duplicate" || res.reason === "amount_mismatch") {
-            toast.error(`Access revoked — ${("detail" in res && res.detail) || res.reason}`);
-          }
-        }
-      })
-      .catch(() => { /* silent; admin can still act */ })
-      .finally(async () => {
-        setBusy(false);
-        const { data: r } = await supabase.from("payment_receipts")
-          .select("id, status, target_tier, amount, created_at")
-          .eq("user_id", user.id).order("created_at", { ascending: false });
-        setReceipts((r as Receipt[]) ?? []);
+  const pay = async (plan: Plan) => {
+    if (!user?.email) return toast.error("Your account has no email on file.");
+    const key = PAYSTACK_PUBLIC_KEY();
+    if (!key) return toast.error("Payments are not configured yet.");
+    setBusy(plan.id);
+    try {
+      const paystack = await loadPaystack();
+      const handler = paystack.setup({
+        key,
+        email: user.email,
+        amount: Math.round(Number(plan.price_ngn) * 100), // kobo
+        currency: "NGN",
+        metadata: { user_id: user.id, plan: plan.name, duration_days: plan.duration_days },
+        callback: (res) => {
+          // Paystack runs this outside React's async flow.
+          void (async () => {
+            const { data, error } = await supabase.rpc("activate_subscription", {
+              _tier: plan.name as "erudite" | "scholar",
+              _reference: res.reference,
+              _amount: Number(plan.price_ngn),
+            });
+            if (error) {
+              toast.error(`Payment received but activation failed: ${error.message}`);
+            } else {
+              const until = data ? new Date(data as unknown as string).toLocaleDateString() : "";
+              toast.success(`You're now ${plan.name}! Access until ${until}`);
+              await refresh();
+              await loadHistory(user.id);
+            }
+            setBusy(null);
+          })();
+        },
+        onClose: () => { setBusy(null); },
       });
+      handler.openIframe();
+    } catch (e) {
+      setBusy(null);
+      toast.error(e instanceof Error ? e.message : "Could not start checkout");
+    }
   };
 
-  const copyAccount = () => {
-    if (!settings) return;
-    navigator.clipboard.writeText(settings.bank_account);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  if (!settings) return <><AppHeader /><div className="p-12 text-center">Loading…</div></>;
+  if (!plans) return <><AppHeader /><div className="p-12 text-center">Loading…</div></>;
 
   return (
     <>
       <AppHeader />
-      <main className="container mx-auto px-4 py-8 max-w-2xl space-y-6">
-        <h1 className="text-3xl font-bold">Upgrade Your Tier</h1>
+      <main className="container mx-auto px-4 py-8 max-w-3xl space-y-6">
+        <header>
+          <h1 className="text-3xl font-bold">Upgrade Your Plan</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Secure card payment via Paystack — access is activated instantly.
+          </p>
+        </header>
 
-        <Card className="p-6 bg-hero text-primary-foreground shadow-glow">
-          <p className="text-xs uppercase opacity-80">Pay to this account</p>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-2xl font-bold">{settings.bank_name}</p>
-              <p className="font-mono text-xl mt-1">{settings.bank_account}</p>
-              <p className="text-sm opacity-90">{settings.bank_account_name}</p>
-            </div>
-            <Button variant="secondary" onClick={copyAccount}>
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            </Button>
-          </div>
-        </Card>
+        {profile && profile.tier !== "novice" && (
+          <Card className="p-5 bg-hero text-primary-foreground shadow-glow">
+            <p className="text-xs uppercase opacity-80">Current plan</p>
+            <p className="text-2xl font-bold capitalize">{profile.tier}</p>
+            {profile.expiry_date && (
+              <p className="text-sm opacity-90">Expires {new Date(profile.expiry_date).toLocaleDateString()}</p>
+            )}
+          </Card>
+        )}
 
         <div className="grid md:grid-cols-2 gap-4">
-          <Card className="p-5"><p className="text-xs uppercase text-muted-foreground">Erudite</p>
-            <p className="text-3xl font-bold">₦{settings.erudite_price.toLocaleString()}</p>
-            <p className="text-sm text-muted-foreground">150 questions/day • {settings.erudite_days} days • AI access</p>
-          </Card>
-          <Card className="p-5"><p className="text-xs uppercase text-muted-foreground">Scholar</p>
-            <p className="text-3xl font-bold">₦{settings.scholar_price.toLocaleString()}</p>
-            <p className="text-sm text-muted-foreground">250 questions/day • {settings.scholar_days} days • AI access</p>
-          </Card>
+          {plans.map(p => (
+            <Card key={p.id} className="p-6 flex flex-col gap-3">
+              <div>
+                <p className="text-xs uppercase text-muted-foreground tracking-wide">{p.name}</p>
+                <p className="text-3xl font-bold mt-1">
+                  ₦{Number(p.price_ngn).toLocaleString()}
+                  <span className="text-base font-normal text-muted-foreground"> / {p.duration_days} days</span>
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground flex-1">{PERKS[p.name] ?? `${p.duration_days} days of full access`}</p>
+              <Button className="bg-hero w-full" disabled={busy === p.id} onClick={() => pay(p)}>
+                {busy === p.id ? "Opening Paystack…" : "Pay with Paystack"}
+              </Button>
+            </Card>
+          ))}
+          {plans.length === 0 && (
+            <Card className="p-6 text-sm text-muted-foreground md:col-span-2">
+              No plans are available right now. Please check back shortly.
+            </Card>
+          )}
         </div>
 
-        <Card className="p-6 bg-card-soft">
-          <h2 className="font-semibold mb-4">Upload Your Receipt</h2>
-          <div className="space-y-3">
-            <div>
-              <Label>Tier you paid for</Label>
-              <Select value={tier} onValueChange={(v) => setTier(v as "erudite" | "scholar")}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="erudite">Erudite — ₦{settings.erudite_price.toLocaleString()}</SelectItem>
-                  <SelectItem value="scholar">Scholar — ₦{settings.scholar_price.toLocaleString()}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Receipt (image or PDF)</Label>
-              <Input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-            </div>
-            <Button onClick={upload} disabled={!file || busy} className="w-full bg-hero">
-              {busy ? "Uploading…" : "Submit Receipt"}
-            </Button>
-          </div>
-        </Card>
-
-        {receipts.length > 0 && (
+        {history.length > 0 && (
           <Card className="p-5">
-            <h2 className="font-semibold mb-3">Your Receipts</h2>
+            <h2 className="font-semibold mb-3">Your Payments</h2>
             <div className="divide-y">
-              {receipts.map(r => (
-                <div key={r.id} className="flex justify-between items-center py-2 text-sm">
+              {history.map(h => (
+                <div key={h.id} className="flex justify-between items-center py-2 text-sm">
                   <div>
-                    <p className="font-medium">{r.target_tier} — ₦{r.amount?.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</p>
+                    <p className="font-medium capitalize">{h.plan_name} — ₦{Number(h.amount_ngn).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {h.duration_days} days · {new Date(h.created_at).toLocaleString()}
+                    </p>
                   </div>
-                  <Badge className={
-                    r.status === "approved" ? "bg-success text-success-foreground" :
-                    r.status === "rejected" ? "bg-destructive text-destructive-foreground" :
-                    "bg-warning text-warning-foreground"
-                  }>{r.status}</Badge>
+                  <Badge className="bg-success text-success-foreground">paid</Badge>
                 </div>
               ))}
             </div>
