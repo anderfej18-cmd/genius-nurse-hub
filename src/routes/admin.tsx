@@ -36,8 +36,9 @@ function Admin() {
         <Tabs defaultValue="questions">
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="questions">Questions</TabsTrigger>
-            <TabsTrigger value="payments">Payments</TabsTrigger>
+            <TabsTrigger value="payments">Upgrades</TabsTrigger>
             <TabsTrigger value="leaderboards">Leaderboards</TabsTrigger>
+            {isCentralAdmin && <TabsTrigger value="pricing">Pricing &amp; Duration</TabsTrigger>}
             {isCentralAdmin && <TabsTrigger value="users">Users</TabsTrigger>}
             {isCentralAdmin && <TabsTrigger value="settings">Settings</TabsTrigger>}
             {isCentralAdmin && <TabsTrigger value="codes">Admin Codes</TabsTrigger>}
@@ -46,11 +47,13 @@ function Admin() {
           <TabsContent value="questions"><QuestionsTab /></TabsContent>
           <TabsContent value="payments"><PaymentsTab /></TabsContent>
           <TabsContent value="leaderboards"><LeaderboardsTab /></TabsContent>
+          {isCentralAdmin && <TabsContent value="pricing"><PricingTab /></TabsContent>}
           {isCentralAdmin && <TabsContent value="users"><UsersTab /></TabsContent>}
           {isCentralAdmin && <TabsContent value="settings"><SettingsTab /></TabsContent>}
           {isCentralAdmin && <TabsContent value="codes"><CodesTab /></TabsContent>}
           {!isCentralAdmin && <TabsContent value="join"><JoinTab /></TabsContent>}
         </Tabs>
+
       </main>
     </>
   );
@@ -331,154 +334,160 @@ Explanation: The normal adult resting heart rate ranges from 60 to 100 bpm.`}</p
   );
 }
 
-interface ReceiptRow {
-  id: string; user_id: string; file_path: string; amount: number | null;
-  target_tier: string; status: string; created_at: string;
-  auto_approved?: boolean; flag_reason?: string | null;
-  profile?: { username: string | null; email: string | null; legal_full_name: string | null; tier: string } | null;
+interface UpgradeRow {
+  id: string; user_id: string; plan_name: string; amount_ngn: number;
+  duration_days: number; created_at: string; reference: string | null;
+  profile?: { username: string | null; email: string | null; legal_full_name: string | null; tier: string; expiry_date: string | null } | null;
 }
 
 function PaymentsTab() {
-  const [rows, setRows] = useState<ReceiptRow[]>([]);
-  // Blob object URLs (same-origin) — signed storage URLs get blocked by Chrome
-  // when embedded in an iframe/img inside the preview frame.
-  const [urls, setUrls] = useState<Record<string, string>>({});
-  const [viewing, setViewing] = useState<ReceiptRow | null>(null);
+  const [rows, setRows] = useState<UpgradeRow[]>([]);
 
   const load = async () => {
-    const { data } = await supabase.from("payment_receipts").select("*").order("created_at", { ascending: false });
-    const list = (data as ReceiptRow[]) ?? [];
-    // Fetch profile info for each unique user
+    const { data } = await supabase.from("subscription_payments").select("*").order("created_at", { ascending: false });
+    const list = (data as UpgradeRow[]) ?? [];
     const userIds = Array.from(new Set(list.map(r => r.user_id)));
     if (userIds.length) {
       const { data: profs } = await supabase.from("profiles")
-        .select("id, username, email, legal_full_name, tier")
+        .select("id, username, email, legal_full_name, tier, expiry_date")
         .in("id", userIds);
       const byId = new Map((profs ?? []).map(p => [p.id, p]));
-      list.forEach(r => { r.profile = byId.get(r.user_id) as ReceiptRow["profile"]; });
+      list.forEach(r => { r.profile = byId.get(r.user_id) as UpgradeRow["profile"]; });
     }
     setRows(list);
-
-    // Download each file and expose it as a local blob URL so it renders inline.
-    const entries: Record<string, string> = {};
-    await Promise.all(list.map(async r => {
-      const { data: blob } = await supabase.storage.from("receipts").download(r.file_path);
-      if (blob) entries[r.id] = URL.createObjectURL(blob);
-    }));
-    setUrls(prev => {
-      Object.values(prev).forEach(u => URL.revokeObjectURL(u));
-      return entries;
-    });
   };
   useEffect(() => { load(); }, []);
 
+  const students = new Set(rows.map(r => r.user_id)).size;
+  const byTier = rows.reduce<Record<string, number>>((acc, r) => {
+    acc[r.plan_name] = (acc[r.plan_name] ?? 0) + 1; return acc;
+  }, {});
+  const revenue = rows.reduce((s, r) => s + Number(r.amount_ngn ?? 0), 0);
 
-  const revoke = async (r: ReceiptRow) => {
-    if (!confirm(`Revoke upgrade for ${r.profile?.username ?? r.user_id.slice(0,8)}? This reverts them to Novice.`)) return;
-    const { error } = await supabase.rpc("flag_receipt_and_revoke", {
-      _receipt_id: r.id, _reason: "Admin manual review — receipt flagged as fake or edited.",
-    });
-    if (error) return toast.error(error.message);
-    toast.success("Upgrade revoked; user reverted to Novice");
+  return (
+    <div className="mt-4 space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="p-4"><p className="text-xs uppercase text-muted-foreground">Students upgraded</p><p className="text-2xl font-bold">{students}</p></Card>
+        <Card className="p-4"><p className="text-xs uppercase text-muted-foreground">Erudite purchases</p><p className="text-2xl font-bold">{byTier["erudite"] ?? 0}</p></Card>
+        <Card className="p-4"><p className="text-xs uppercase text-muted-foreground">Scholar purchases</p><p className="text-2xl font-bold">{byTier["scholar"] ?? 0}</p></Card>
+        <Card className="p-4"><p className="text-xs uppercase text-muted-foreground">Total collected</p><p className="text-2xl font-bold">₦{revenue.toLocaleString()}</p></Card>
+      </div>
+
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={load}>Refresh</Button>
+      </div>
+
+      <Card className="p-4 divide-y">
+        {rows.length === 0 && <p className="p-6 text-center text-muted-foreground text-sm">No upgrades yet.</p>}
+        {rows.map(r => (
+          <div key={r.id} className="py-3 flex items-start justify-between gap-3 flex-wrap">
+            <div className="text-sm">
+              <p className="font-medium">
+                {r.profile?.username ?? "—"}{" "}
+                <span className="text-muted-foreground">({r.profile?.email ?? r.user_id.slice(0, 8)})</span>
+              </p>
+              <p className="text-xs"><span className="text-muted-foreground">Legal Name:</span> <strong>{r.profile?.legal_full_name ?? "— not provided —"}</strong></p>
+              <p className="text-xs text-muted-foreground">
+                Current tier: <Badge variant="secondary">{r.profile?.tier ?? "?"}</Badge>
+                {r.profile?.expiry_date && ` · expires ${new Date(r.profile.expiry_date).toLocaleDateString()}`}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Paid {new Date(r.created_at).toLocaleString()}{r.reference ? ` · ref ${r.reference}` : ""}
+              </p>
+            </div>
+            <div className="text-right">
+              <Badge className="bg-success text-success-foreground capitalize">{r.plan_name}</Badge>
+              <p className="text-sm font-semibold mt-1">₦{Number(r.amount_ngn).toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">{r.duration_days} days</p>
+            </div>
+          </div>
+        ))}
+      </Card>
+    </div>
+  );
+}
+
+interface PlanRow { id: string; name: string; price_ngn: number; duration_days: number; is_active: boolean }
+
+function PricingTab() {
+  const [plans, setPlans] = useState<PlanRow[] | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    const { data } = await supabase.from("plans")
+      .select("id, name, price_ngn, duration_days, is_active")
+      .in("name", ["erudite", "scholar"]).order("name");
+    setPlans((data as PlanRow[]) ?? []);
+  };
+  useEffect(() => { load(); }, []);
+
+  const patch = (id: string, p: Partial<PlanRow>) =>
+    setPlans(list => (list ?? []).map(x => (x.id === id ? { ...x, ...p } : x)));
+
+  const save = async () => {
+    if (!plans) return;
+    if (plans.some(p => p.price_ngn <= 0 || p.duration_days <= 0)) {
+      return toast.error("Price and duration must both be greater than 0");
+    }
+    setSaving(true);
+    for (const p of plans) {
+      const { error } = await supabase.from("plans")
+        .update({ price_ngn: p.price_ngn, duration_days: p.duration_days, is_active: p.is_active })
+        .eq("id", p.id);
+      if (error) { setSaving(false); return toast.error(error.message); }
+    }
+    setSaving(false);
+    toast.success("Pricing & duration updated");
     load();
   };
 
-  const isImage = (path: string) => /\.(jpe?g|png|webp|gif|bmp|heic)$/i.test(path);
-
-  const statusBadge = (r: ReceiptRow) => {
-    if (r.status === "approved" && r.auto_approved) return <Badge className="bg-success text-success-foreground">automatically_approved</Badge>;
-    if (r.status === "approved") return <Badge className="bg-success text-success-foreground">approved</Badge>;
-    if (r.status === "rejected") return <Badge variant="destructive">{r.flag_reason ? "flagged" : "rejected"}</Badge>;
-    return <Badge>{r.status}</Badge>;
-  };
+  if (!plans) return <div className="p-6">Loading…</div>;
 
   return (
-    <Card className="p-4 mt-4 divide-y">
-      {rows.length === 0 && <p className="p-6 text-center text-muted-foreground text-sm">No receipts.</p>}
-      {rows.map(r => (
-        <div key={r.id} className="py-4 grid md:grid-cols-[220px_1fr] gap-4">
-          <div className="space-y-2">
-            {!urls[r.id] ? (
-              <div className="h-40 rounded border bg-muted animate-pulse" />
-            ) : isImage(r.file_path) ? (
-              <button type="button" onClick={() => setViewing(r)} className="block w-full">
-                <img src={urls[r.id]} alt="receipt" className="w-full h-40 object-cover rounded border" />
-              </button>
-            ) : (
-              <button type="button" onClick={() => setViewing(r)}
-                className="flex w-full items-center justify-center h-40 rounded border bg-muted text-xs text-muted-foreground">
-                📄 View receipt ({r.file_path.split(".").pop()?.toUpperCase()})
-              </button>
-            )}
-            <div className="flex gap-2">
-              <Button size="sm" variant="secondary" className="flex-1" onClick={() => setViewing(r)} disabled={!urls[r.id]}>
-                View
-              </Button>
-              <Button size="sm" variant="outline" className="flex-1" disabled={!urls[r.id]}
-                onClick={() => {
-                  const href = urls[r.id];
-                  if (!href) return toast.error("Receipt not ready yet");
-                  const a = document.createElement("a");
-                  a.href = href; a.download = r.file_path.split("/").pop() ?? "receipt";
-                  a.click();
-                }}>
-                Download
-              </Button>
-
+    <div className="mt-4 space-y-4 max-w-2xl">
+      <p className="text-sm text-muted-foreground">
+        These values drive the student checkout screen and how long access lasts after payment.
+      </p>
+      {plans.map(p => (
+        <Card key={p.id} className="p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold capitalize">{p.name}</h3>
+            <Badge variant={p.is_active ? "secondary" : "outline"}>{p.is_active ? "active" : "hidden"}</Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Price (₦)</Label>
+              <Input type="number" min={1} value={p.price_ngn}
+                onChange={(e) => patch(p.id, { price_ngn: Number(e.target.value) })} />
+            </div>
+            <div>
+              <Label>Duration (days)</Label>
+              <Input type="number" min={1} value={p.duration_days}
+                onChange={(e) => patch(p.id, { duration_days: Number(e.target.value) })} />
             </div>
           </div>
-          <div className="space-y-2">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div className="text-sm">
-                <p className="font-semibold">{r.target_tier} • ₦{r.amount?.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">
-                  {r.profile?.username ?? "—"} · {r.profile?.email ?? r.user_id.slice(0,8)}
-                </p>
-                <p className="text-xs">
-                  <span className="text-muted-foreground">Legal Name:</span>{" "}
-                  <strong>{r.profile?.legal_full_name ?? "— not provided —"}</strong>
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Current tier: <Badge variant="secondary">{r.profile?.tier ?? "?"}</Badge> ·
-                  Submitted {new Date(r.created_at).toLocaleString()}
-                </p>
-                {r.flag_reason && <p className="text-xs text-destructive mt-1">⚠ {r.flag_reason}</p>}
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                {statusBadge(r)}
-                {r.status !== "rejected" && (
-                  <Button size="sm" variant="destructive" onClick={() => revoke(r)}>Revoke Upgrade</Button>
-                )}
-              </div>
-            </div>
+          <div>
+            <Label>Visibility</Label>
+            <Select value={p.is_active ? "yes" : "no"} onValueChange={(v) => patch(p.id, { is_active: v === "yes" })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">Show on checkout</SelectItem>
+                <SelectItem value="no">Hide from checkout</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
+          <p className="text-xs text-muted-foreground">
+            Students will see: ₦{Number(p.price_ngn || 0).toLocaleString()} / {p.duration_days} days
+          </p>
+        </Card>
       ))}
-      <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>
-              Receipt — {viewing?.profile?.legal_full_name ?? viewing?.profile?.username ?? "user"}
-            </DialogTitle>
-            <DialogDescription>Submitted receipt preview.</DialogDescription>
-          </DialogHeader>
-          {viewing && urls[viewing.id] && (
-            isImage(viewing.file_path) ? (
-              <img src={urls[viewing.id]} alt="receipt" className="w-full max-h-[70vh] object-contain rounded" />
-            ) : (
-              <object data={urls[viewing.id]} type="application/pdf" className="w-full h-[70vh] rounded border">
-                <p className="p-4 text-sm text-muted-foreground">
-                  Inline preview unavailable — use the Download button to open this receipt.
-                </p>
-              </object>
-            )
-          )}
-
-        </DialogContent>
-      </Dialog>
-    </Card>
+      <Button onClick={save} disabled={saving} className="bg-hero w-full">
+        {saving ? "Saving…" : "Save Changes"}
+      </Button>
+    </div>
   );
 }
+
 
 interface UserRow { id: string; email: string | null; username: string | null; legal_full_name: string | null; tier: string; expiry_date: string | null; }
 
