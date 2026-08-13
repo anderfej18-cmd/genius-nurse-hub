@@ -36,8 +36,9 @@ function Admin() {
         <Tabs defaultValue="questions">
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="questions">Questions</TabsTrigger>
-            <TabsTrigger value="payments">Payments</TabsTrigger>
+            <TabsTrigger value="payments">Upgrades</TabsTrigger>
             <TabsTrigger value="leaderboards">Leaderboards</TabsTrigger>
+            {isCentralAdmin && <TabsTrigger value="pricing">Pricing &amp; Duration</TabsTrigger>}
             {isCentralAdmin && <TabsTrigger value="users">Users</TabsTrigger>}
             {isCentralAdmin && <TabsTrigger value="settings">Settings</TabsTrigger>}
             {isCentralAdmin && <TabsTrigger value="codes">Admin Codes</TabsTrigger>}
@@ -46,11 +47,13 @@ function Admin() {
           <TabsContent value="questions"><QuestionsTab /></TabsContent>
           <TabsContent value="payments"><PaymentsTab /></TabsContent>
           <TabsContent value="leaderboards"><LeaderboardsTab /></TabsContent>
+          {isCentralAdmin && <TabsContent value="pricing"><PricingTab /></TabsContent>}
           {isCentralAdmin && <TabsContent value="users"><UsersTab /></TabsContent>}
           {isCentralAdmin && <TabsContent value="settings"><SettingsTab /></TabsContent>}
           {isCentralAdmin && <TabsContent value="codes"><CodesTab /></TabsContent>}
           {!isCentralAdmin && <TabsContent value="join"><JoinTab /></TabsContent>}
         </Tabs>
+
       </main>
     </>
   );
