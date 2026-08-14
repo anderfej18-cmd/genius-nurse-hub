@@ -40,9 +40,6 @@ export type Database = {
       }
       app_settings: {
         Row: {
-          bank_account: string
-          bank_account_name: string
-          bank_name: string
           erudite_daily_limit: number
           erudite_days: number
           erudite_price: number
@@ -53,9 +50,6 @@ export type Database = {
           scholar_price: number
         }
         Insert: {
-          bank_account?: string
-          bank_account_name?: string
-          bank_name?: string
           erudite_daily_limit?: number
           erudite_days?: number
           erudite_price?: number
@@ -66,9 +60,6 @@ export type Database = {
           scholar_price?: number
         }
         Update: {
-          bank_account?: string
-          bank_account_name?: string
-          bank_name?: string
           erudite_daily_limit?: number
           erudite_days?: number
           erudite_price?: number
