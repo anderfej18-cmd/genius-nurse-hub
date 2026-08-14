@@ -259,7 +259,6 @@ export type Database = {
           id: string
           last_name: string | null
           last_question_date: string | null
-          legal_full_name: string | null
           onboarded: boolean
           questions_today: number
           tier: Database["public"]["Enums"]["user_tier"]
@@ -275,7 +274,6 @@ export type Database = {
           id: string
           last_name?: string | null
           last_question_date?: string | null
-          legal_full_name?: string | null
           onboarded?: boolean
           questions_today?: number
           tier?: Database["public"]["Enums"]["user_tier"]
@@ -291,7 +289,6 @@ export type Database = {
           id?: string
           last_name?: string | null
           last_question_date?: string | null
-          legal_full_name?: string | null
           onboarded?: boolean
           questions_today?: number
           tier?: Database["public"]["Enums"]["user_tier"]

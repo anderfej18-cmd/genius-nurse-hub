@@ -40,7 +40,6 @@ function Admin() {
             <TabsTrigger value="leaderboards">Leaderboards</TabsTrigger>
             {isCentralAdmin && <TabsTrigger value="pricing">Pricing &amp; Duration</TabsTrigger>}
             {isCentralAdmin && <TabsTrigger value="users">Users</TabsTrigger>}
-            {isCentralAdmin && <TabsTrigger value="settings">Settings</TabsTrigger>}
             {isCentralAdmin && <TabsTrigger value="codes">Admin Codes</TabsTrigger>}
             {!isCentralAdmin && <TabsTrigger value="join">Become Admin</TabsTrigger>}
           </TabsList>
@@ -49,7 +48,6 @@ function Admin() {
           <TabsContent value="leaderboards"><LeaderboardsTab /></TabsContent>
           {isCentralAdmin && <TabsContent value="pricing"><PricingTab /></TabsContent>}
           {isCentralAdmin && <TabsContent value="users"><UsersTab /></TabsContent>}
-          {isCentralAdmin && <TabsContent value="settings"><SettingsTab /></TabsContent>}
           {isCentralAdmin && <TabsContent value="codes"><CodesTab /></TabsContent>}
           {!isCentralAdmin && <TabsContent value="join"><JoinTab /></TabsContent>}
         </Tabs>
@@ -337,7 +335,7 @@ Explanation: The normal adult resting heart rate ranges from 60 to 100 bpm.`}</p
 interface UpgradeRow {
   id: string; user_id: string; plan_name: string; amount_ngn: number;
   duration_days: number; created_at: string; reference: string | null;
-  profile?: { username: string | null; email: string | null; legal_full_name: string | null; tier: string; expiry_date: string | null } | null;
+  profile?: { username: string | null; email: string | null; tier: string; expiry_date: string | null } | null;
 }
 
 function PaymentsTab() {
@@ -349,7 +347,7 @@ function PaymentsTab() {
     const userIds = Array.from(new Set(list.map(r => r.user_id)));
     if (userIds.length) {
       const { data: profs } = await supabase.from("profiles")
-        .select("id, username, email, legal_full_name, tier, expiry_date")
+        .select("id, username, email, tier, expiry_date")
         .in("id", userIds);
       const byId = new Map((profs ?? []).map(p => [p.id, p]));
       list.forEach(r => { r.profile = byId.get(r.user_id) as UpgradeRow["profile"]; });
@@ -386,7 +384,6 @@ function PaymentsTab() {
                 {r.profile?.username ?? "—"}{" "}
                 <span className="text-muted-foreground">({r.profile?.email ?? r.user_id.slice(0, 8)})</span>
               </p>
-              <p className="text-xs"><span className="text-muted-foreground">Legal Name:</span> <strong>{r.profile?.legal_full_name ?? "— not provided —"}</strong></p>
               <p className="text-xs text-muted-foreground">
                 Current tier: <Badge variant="secondary">{r.profile?.tier ?? "?"}</Badge>
                 {r.profile?.expiry_date && ` · expires ${new Date(r.profile.expiry_date).toLocaleDateString()}`}
@@ -489,7 +486,7 @@ function PricingTab() {
 }
 
 
-interface UserRow { id: string; email: string | null; username: string | null; legal_full_name: string | null; tier: string; expiry_date: string | null; }
+interface UserRow { id: string; email: string | null; username: string | null; tier: string; expiry_date: string | null; }
 
 function UsersTab() {
   const [rows, setRows] = useState<UserRow[]>([]);
@@ -500,7 +497,7 @@ function UsersTab() {
   const [assignDays, setAssignDays] = useState<number>(30);
 
   const load = async () => {
-    const { data } = await supabase.from("profiles").select("id, email, username, legal_full_name, tier, expiry_date");
+    const { data } = await supabase.from("profiles").select("id, email, username, tier, expiry_date");
     setRows((data as UserRow[]) ?? []);
     const { data: ex } = await supabase.from("exams").select("user_id, score_pct").eq("status", "completed").not("score_pct", "is", null);
     const agg: Record<string, { sum: number; n: number }> = {};
@@ -540,6 +537,10 @@ function UsersTab() {
 
   return (
     <div className="mt-4 space-y-3">
+      <Card className="p-5 bg-hero text-primary-foreground shadow-glow">
+        <p className="text-xs uppercase opacity-80 tracking-wide">Total registered users</p>
+        <p className="text-4xl font-bold">{rows.length}</p>
+      </Card>
       <Input placeholder="Search by name or email…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       <Card className="p-4 divide-y">
         {filtered.length === 0 && <p className="p-6 text-center text-muted-foreground text-sm">No users.</p>}
@@ -548,7 +549,6 @@ function UsersTab() {
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="text-sm">
                 <p className="font-medium">{u.username ?? "—"} <span className="text-muted-foreground">({u.email})</span></p>
-                <p className="text-xs"><span className="text-muted-foreground">Legal Name:</span> <strong>{u.legal_full_name ?? "— not provided —"}</strong></p>
                 <p className="text-xs text-muted-foreground">
                   <Badge variant="secondary" className="mr-1">{u.tier}</Badge>
                   {u.expiry_date && `expires ${new Date(u.expiry_date).toLocaleDateString()}`}
@@ -589,31 +589,6 @@ function UsersTab() {
         ))}
       </Card>
     </div>
-  );
-}
-
-function SettingsTab() {
-  const [s, setS] = useState<{ erudite_price: number; scholar_price: number; erudite_days: number; scholar_days: number; bank_account: string; bank_account_name: string; bank_name: string } | null>(null);
-  useEffect(() => { supabase.from("app_settings").select("*").eq("id", 1).single().then(({ data }) => setS(data as typeof s)); }, []);
-  if (!s) return <div className="p-6">Loading…</div>;
-  const save = async () => {
-    const { error } = await supabase.from("app_settings").update(s).eq("id", 1);
-    if (error) return toast.error(error.message);
-    toast.success("Saved");
-  };
-  return (
-    <Card className="p-5 mt-4 space-y-3 max-w-md">
-      <div className="grid grid-cols-2 gap-3">
-        <div><Label>Erudite Price</Label><Input type="number" value={s.erudite_price} onChange={(e) => setS({ ...s, erudite_price: Number(e.target.value) })} /></div>
-        <div><Label>Erudite Days</Label><Input type="number" value={s.erudite_days} onChange={(e) => setS({ ...s, erudite_days: Number(e.target.value) })} /></div>
-        <div><Label>Scholar Price</Label><Input type="number" value={s.scholar_price} onChange={(e) => setS({ ...s, scholar_price: Number(e.target.value) })} /></div>
-        <div><Label>Scholar Days</Label><Input type="number" value={s.scholar_days} onChange={(e) => setS({ ...s, scholar_days: Number(e.target.value) })} /></div>
-      </div>
-      <div><Label>Bank Name</Label><Input value={s.bank_name} onChange={(e) => setS({ ...s, bank_name: e.target.value })} /></div>
-      <div><Label>Account Number</Label><Input value={s.bank_account} onChange={(e) => setS({ ...s, bank_account: e.target.value })} /></div>
-      <div><Label>Account Name</Label><Input value={s.bank_account_name} onChange={(e) => setS({ ...s, bank_account_name: e.target.value })} /></div>
-      <Button onClick={save} className="bg-hero w-full">Save Settings</Button>
-    </Card>
   );
 }
 
