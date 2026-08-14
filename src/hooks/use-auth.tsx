@@ -10,7 +10,6 @@ export interface Profile {
   email: string | null;
   first_name: string | null;
   last_name: string | null;
-  legal_full_name: string | null;
   username: string | null;
   exam_date: string | null;
   exam_preference: "RN" | "RM" | "Both" | null;

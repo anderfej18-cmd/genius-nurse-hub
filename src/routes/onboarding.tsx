@@ -18,7 +18,6 @@ function Onboarding() {
 
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
-  const [legalName, setLegalName] = useState("");
   const [username, setUsername] = useState("Nurse");
   const [examDate, setExamDate] = useState("");
   const [pref, setPref] = useState<"RN" | "RM" | "Both">("RN");
@@ -34,16 +33,14 @@ function Onboarding() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!first.trim() || !last.trim()) return toast.error("First and last name required");
-    if (!legalName.trim() || legalName.trim().length < 3) return toast.error("Legal Full Name is required and must match your bank account");
-    if (!/^Nurse[A-Za-z0-9_]{2,20}$/.test(username)) return toast.error("Username must start with 'Nurse' and contain 2–20 letters/digits after");
+    if (!/^Nurse[A-Za-z0-9 _]{2,20}$/.test(username.trim() ? username : "")) return toast.error("Username must start with 'Nurse' followed by 2–20 letters, digits or spaces");
     if (!examDate) return toast.error("Exam date required");
 
     setBusy(true);
     const { error } = await supabase.from("profiles").update({
       first_name: first.trim(),
       last_name: last.trim(),
-      legal_full_name: legalName.trim(),
-      username,
+      username: username.trim().replace(/\s+/g, " "),
       exam_date: examDate,
       exam_preference: pref,
       onboarded: true,
@@ -70,18 +67,6 @@ function Onboarding() {
             <div className="grid grid-cols-2 gap-3">
               <div><Label>First Name</Label><Input value={first} onChange={(e) => setFirst(e.target.value)} maxLength={50} /></div>
               <div><Label>Last Name</Label><Input value={last} onChange={(e) => setLast(e.target.value)} maxLength={50} /></div>
-            </div>
-            <div>
-              <Label>Legal Full Name</Label>
-              <Input
-                value={legalName}
-                onChange={(e) => setLegalName(e.target.value)}
-                maxLength={100}
-                placeholder="e.g. Chidinma Grace Okeke"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Must match the name on your bank account — used to verify payments.
-              </p>
             </div>
             <div>
               <Label>Username</Label>
