@@ -33,14 +33,15 @@ function Onboarding() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!first.trim() || !last.trim()) return toast.error("First and last name required");
-    if (!/^Nurse[A-Za-z0-9 _]{2,20}$/.test(username.trim() ? username : "")) return toast.error("Username must start with 'Nurse' followed by 2–20 letters, digits or spaces");
+    const uname = username.trim().replace(/\s+/g, " ");
+    if (!/^Nurse[A-Za-z0-9 _]{2,20}$/.test(uname)) return toast.error("Username must start with 'Nurse' followed by 2–20 letters, digits or spaces");
     if (!examDate) return toast.error("Exam date required");
 
     setBusy(true);
     const { error } = await supabase.from("profiles").update({
       first_name: first.trim(),
       last_name: last.trim(),
-      username: username.trim().replace(/\s+/g, " "),
+      username: uname,
       exam_date: examDate,
       exam_preference: pref,
       onboarded: true,
@@ -62,7 +63,7 @@ function Onboarding() {
       <main className="container mx-auto px-4 py-12 max-w-lg">
         <Card className="p-6 bg-card-soft shadow-glow">
           <h1 className="text-2xl font-bold">Set up your profile</h1>
-          <p className="text-sm text-muted-foreground mt-1">Your username must start with <strong>Nurse</strong> (e.g. NurseAlex).</p>
+          <p className="text-sm text-muted-foreground mt-1">Your username must start with <strong>Nurse</strong> (e.g. Nurse Alex).</p>
           <form onSubmit={submit} className="space-y-4 mt-6">
             <div className="grid grid-cols-2 gap-3">
               <div><Label>First Name</Label><Input value={first} onChange={(e) => setFirst(e.target.value)} maxLength={50} /></div>
