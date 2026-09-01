@@ -371,7 +371,15 @@ function BrokenQuestionsTab() {
   const save = async () => {
     if (!editing) return;
     setSaving(true);
-    const { id, exam_type: _examType, topic: _topic, ...changes } = editing;
+    const { id, exam_type: _examType, topic: _topic, ...fields } = editing;
+    const changes = {
+      question_text: fields.question_text ?? "",
+      option_a: fields.option_a ?? "",
+      option_b: fields.option_b ?? "",
+      option_c: fields.option_c ?? "",
+      option_d: fields.option_d ?? "",
+      correct_answer: fields.correct_answer ?? "",
+    };
     const { error } = await supabase.from("questions").update(changes).eq("id", id);
     setSaving(false);
     if (error) return toast.error(error.message);
