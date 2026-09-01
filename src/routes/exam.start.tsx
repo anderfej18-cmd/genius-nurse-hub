@@ -10,6 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { fetchTopics } from "@/lib/topics";
+import { isCompleteQuestion } from "@/lib/questions";
 
 export const Route = createFileRoute("/exam/start")({ component: ExamStart });
 
@@ -60,19 +61,32 @@ function ExamStart() {
     // Page through the bank so "All Areas" draws from every subcategory,
     // not just the first 1000 rows the API returns per request.
     const PAGE = 1000;
-    const pool: { id: string }[] = [];
+    const pool: Array<{
+      id: string;
+      question_text: string | null;
+      option_a: string | null;
+      option_b: string | null;
+      option_c: string | null;
+      option_d: string | null;
+      correct_answer: string | null;
+    }> = [];
     let e1: unknown = null;
     for (let from = 0; ; from += PAGE) {
-      let q = supabase.from("questions").select("id").eq("exam_type", examType);
+      let q = supabase.from("questions")
+        .select("id, question_text, option_a, option_b, option_c, option_d, correct_answer")
+        .eq("exam_type", examType);
       if (category !== ALL_AREAS) q = q.eq("topic", category);
       const { data, error } = await q.range(from, from + PAGE - 1);
       if (error) { e1 = error; break; }
-      pool.push(...(data ?? []));
+      pool.push(...((data ?? []).filter(isCompleteQuestion) as typeof pool));
       if (!data || data.length < PAGE) break;
     }
     if (e1 || pool.length === 0) {
       setBusy(false);
       return toast.error("No questions available for this selection. Ask an admin to upload some.");
+    }
+    if (pool.length < count) {
+      toast.info(`Only ${pool.length} complete questions are available for this selection.`);
     }
     const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, count);
 

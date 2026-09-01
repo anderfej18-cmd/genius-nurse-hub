@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Flag, ChevronLeft, ChevronRight, Send, Timer } from "lucide-react";
 import { toast } from "sonner";
+import { isCompleteQuestion } from "@/lib/questions";
 
 export const Route = createFileRoute("/exam/$examId/")({ component: ExamRuntime });
 
@@ -50,10 +51,14 @@ function ExamRuntime() {
         ? await supabase.from("questions").select("*").in("id", ids)
         : { data: [] };
       const map = new Map((qs ?? []).map(q => [q.id, q as Question]));
-      setItems((ans ?? []).flatMap(a => {
+      const completeItems = (ans ?? []).flatMap(a => {
         const q = map.get(a.question_id);
-        return q ? [{ a: a as AnswerRow, q }] : [];
-      }));
+        return q && isCompleteQuestion(q) ? [{ a: a as AnswerRow, q }] : [];
+      });
+      if (completeItems.length !== (ans ?? []).length) {
+        toast.info("Incomplete questions were removed from this test.");
+      }
+      setItems(completeItems);
     })();
   }, [examId, user, navigate]);
 
