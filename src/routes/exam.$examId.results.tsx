@@ -96,7 +96,7 @@ function Results() {
 
   if (!exam) return <><AppHeader /><div className="p-12 text-center">Loading results…</div></>;
 
-  const total = exam.total_questions;
+  const total = items.length;
   const correct = items.filter(i => i.is_correct === true).length;
   const attempted = items.filter(i => i.user_answer !== null).length;
   const wrong = attempted - correct;

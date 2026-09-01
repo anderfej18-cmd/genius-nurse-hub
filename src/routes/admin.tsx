@@ -356,6 +356,7 @@ function BrokenQuestionsTab() {
     for (let from = 0; ; from += pageSize) {
       const { data, error } = await supabase.from("questions")
         .select("id, exam_type, topic, question_text, option_a, option_b, option_c, option_d, correct_answer")
+        .order("id", { ascending: true })
         .range(from, from + pageSize - 1);
       if (error) { errorMessage = error.message; break; }
       all.push(...((data ?? []) as BrokenQuestion[]));
