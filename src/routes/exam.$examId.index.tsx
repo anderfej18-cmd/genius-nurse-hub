@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Flag, ChevronLeft, ChevronRight, Send, Timer } from "lucide-react";
 import { toast } from "sonner";
+import { isCompleteQuestion } from "@/lib/questions";
 
 export const Route = createFileRoute("/exam/$examId/")({ component: ExamRuntime });
 
@@ -30,6 +31,7 @@ function ExamRuntime() {
 
   const [exam, setExam] = useState<ExamRow | null>(null);
   const [items, setItems] = useState<{ a: AnswerRow; q: Question }[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [idx, setIdx] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [submitting, setSubmitting] = useState(false);
@@ -50,10 +52,15 @@ function ExamRuntime() {
         ? await supabase.from("questions").select("*").in("id", ids)
         : { data: [] };
       const map = new Map((qs ?? []).map(q => [q.id, q as Question]));
-      setItems((ans ?? []).flatMap(a => {
+      const completeItems = (ans ?? []).flatMap(a => {
         const q = map.get(a.question_id);
-        return q ? [{ a: a as AnswerRow, q }] : [];
-      }));
+        return q && isCompleteQuestion(q) ? [{ a: a as AnswerRow, q }] : [];
+      });
+      if (completeItems.length !== (ans ?? []).length) {
+        toast.info("Incomplete questions were removed from this test.");
+      }
+      setItems(completeItems);
+      setLoaded(true);
     })();
   }, [examId, user, navigate]);
 
@@ -122,7 +129,13 @@ function ExamRuntime() {
     if (exam && remaining === 0 && !submitting) submit();
   }, [exam, remaining, submitting, submit]);
 
-  if (!exam || items.length === 0) return <div className="p-12 text-center">Loading exam…</div>;
+  if (!exam || !loaded) return <div className="p-12 text-center">Loading exam…</div>;
+  if (items.length === 0) return (
+    <div className="p-12 text-center space-y-3">
+      <p className="font-medium">This test has no complete questions to display.</p>
+      <Button onClick={() => navigate({ to: "/dashboard" })}>Back to Dashboard</Button>
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col">

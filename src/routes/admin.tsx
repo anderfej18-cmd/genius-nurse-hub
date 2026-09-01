@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { LeaderboardTable } from "@/components/LeaderboardTable";
 import { fetchTopicCounts } from "@/lib/topics";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { questionIssues, type QuestionFields } from "@/lib/questions";
+import { AlertTriangle, Pencil, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({ component: Admin });
 
@@ -36,6 +38,7 @@ function Admin() {
         <Tabs defaultValue="questions">
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="questions">Questions</TabsTrigger>
+            <TabsTrigger value="audit">Audit / Broken Questions</TabsTrigger>
             <TabsTrigger value="payments">Upgrades</TabsTrigger>
             <TabsTrigger value="leaderboards">Leaderboards</TabsTrigger>
             {isCentralAdmin && <TabsTrigger value="pricing">Pricing &amp; Duration</TabsTrigger>}
@@ -44,6 +47,7 @@ function Admin() {
             {!isCentralAdmin && <TabsTrigger value="join">Become Admin</TabsTrigger>}
           </TabsList>
           <TabsContent value="questions"><QuestionsTab /></TabsContent>
+          <TabsContent value="audit"><BrokenQuestionsTab /></TabsContent>
           <TabsContent value="payments"><PaymentsTab /></TabsContent>
           <TabsContent value="leaderboards"><LeaderboardsTab /></TabsContent>
           {isCentralAdmin && <TabsContent value="pricing"><PricingTab /></TabsContent>}
@@ -328,6 +332,129 @@ Explanation: The normal adult resting heart rate ranges from 60 to 100 bpm.`}</p
         <div><Label>Explanation</Label><Textarea value={rationale} onChange={(e) => setRationale(e.target.value)} rows={2} /></div>
         <Button onClick={addOne} className="bg-hero">Add Question</Button>
       </Card>
+    </div>
+  );
+}
+
+interface BrokenQuestion extends QuestionFields {
+  id: string;
+  exam_type: "RN" | "RM";
+  topic: string;
+}
+
+function BrokenQuestionsTab() {
+  const [rows, setRows] = useState<BrokenQuestion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<BrokenQuestion | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const pageSize = 1000;
+    const all: BrokenQuestion[] = [];
+    let errorMessage: string | null = null;
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase.from("questions")
+        .select("id, exam_type, topic, question_text, option_a, option_b, option_c, option_d, correct_answer")
+        .order("id", { ascending: true })
+        .range(from, from + pageSize - 1);
+      if (error) { errorMessage = error.message; break; }
+      all.push(...((data ?? []) as BrokenQuestion[]));
+      if (!data || data.length < pageSize) break;
+    }
+    if (errorMessage) toast.error(errorMessage);
+    setRows(all.filter(row => questionIssues(row).length > 0));
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const save = async () => {
+    if (!editing) return;
+    setSaving(true);
+    const { id, exam_type: _examType, topic: _topic, ...fields } = editing;
+    const changes = {
+      question_text: fields.question_text ?? "",
+      option_a: fields.option_a ?? "",
+      option_b: fields.option_b ?? "",
+      option_c: fields.option_c ?? "",
+      option_d: fields.option_d ?? "",
+      correct_answer: fields.correct_answer ?? "",
+    };
+    const { error } = await supabase.from("questions").update(changes).eq("id", id);
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Question repaired");
+    setEditing(null);
+    load();
+  };
+
+  const remove = async (row: BrokenQuestion) => {
+    if (!confirm("Delete this broken question permanently?")) return;
+    const { error } = await supabase.from("questions").delete().eq("id", row.id);
+    if (error) return toast.error(error.message);
+    toast.success("Question deleted");
+    setRows(current => current.filter(item => item.id !== row.id));
+  };
+
+  const updateEditing = (key: keyof QuestionFields, value: string) => {
+    setEditing(current => current ? { ...current, [key]: value } : current);
+  };
+
+  return (
+    <div className="mt-4 space-y-4">
+      <Card className="p-5 flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-warning" />
+            <h2 className="font-semibold">Broken question inspector</h2>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">Scans every RN and RM question for missing text, options, or a valid A–D answer.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={load} disabled={loading}>Rescan</Button>
+      </Card>
+
+      <Card className="p-4">
+        <p className="text-sm font-medium mb-3">{loading ? "Scanning question bank…" : `${rows.length} broken question${rows.length === 1 ? "" : "s"} found`}</p>
+        {!loading && rows.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">All questions are complete.</p>}
+        <div className="divide-y">
+          {rows.map(row => (
+            <div key={row.id} className="py-4 flex items-start justify-between gap-4 flex-wrap">
+              <div className="min-w-0 text-sm">
+                <p className="font-medium break-all">{row.id}</p>
+                <p className="text-muted-foreground">{row.exam_type} · {row.topic || "No subcategory"}</p>
+                <p className="mt-1 text-xs text-destructive">Missing: {questionIssues(row).join(", ")}</p>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Button size="sm" variant="outline" onClick={() => setEditing(row)}><Pencil /> Edit</Button>
+                <Button size="sm" variant="destructive" onClick={() => remove(row)}><Trash2 /> Delete Row</Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Dialog open={!!editing} onOpenChange={open => !open && setEditing(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit broken question</DialogTitle>
+            <DialogDescription>Repair the fields below, then save to remove it from the audit.</DialogDescription>
+          </DialogHeader>
+          {editing && (
+            <div className="space-y-3">
+              <div><Label>Question</Label><Textarea rows={3} value={editing.question_text ?? ""} onChange={e => updateEditing("question_text", e.target.value)} /></div>
+              {(["option_a", "option_b", "option_c", "option_d"] as const).map(key => (
+                <div key={key}><Label>{key.replace("option_", "Option ").toUpperCase()}</Label><Input value={editing[key] ?? ""} onChange={e => updateEditing(key, e.target.value)} /></div>
+              ))}
+              <div><Label>Correct Answer</Label><Select value={editing.correct_answer ?? ""} onValueChange={value => updateEditing("correct_answer", value)}>
+                <SelectTrigger><SelectValue placeholder="Choose A–D" /></SelectTrigger>
+                <SelectContent>{["A", "B", "C", "D"].map(value => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent>
+              </Select></div>
+              <Button className="w-full bg-hero" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save repair"}</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
