@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Copy, Check, Trophy, Star, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { isCompleteQuestion } from "@/lib/questions";
 
 export const Route = createFileRoute("/exam/$examId/results")({ component: Results });
 
@@ -46,7 +47,8 @@ function Results() {
           .eq("exam_id", examId)
           .order("position");
         if (error) throw error;
-        setItems((data as unknown as Item[]) ?? []);
+        const completeItems = ((data as unknown as Item[]) ?? []).filter(item => item.questions && isCompleteQuestion(item.questions));
+        setItems(completeItems);
       } catch (err) {
         setLoadErr((err as Error).message ?? "Failed to load results");
       }

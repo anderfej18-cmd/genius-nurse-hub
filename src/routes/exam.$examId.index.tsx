@@ -31,6 +31,7 @@ function ExamRuntime() {
 
   const [exam, setExam] = useState<ExamRow | null>(null);
   const [items, setItems] = useState<{ a: AnswerRow; q: Question }[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [idx, setIdx] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [submitting, setSubmitting] = useState(false);
@@ -59,6 +60,7 @@ function ExamRuntime() {
         toast.info("Incomplete questions were removed from this test.");
       }
       setItems(completeItems);
+      setLoaded(true);
     })();
   }, [examId, user, navigate]);
 
@@ -127,7 +129,13 @@ function ExamRuntime() {
     if (exam && remaining === 0 && !submitting) submit();
   }, [exam, remaining, submitting, submit]);
 
-  if (!exam || items.length === 0) return <div className="p-12 text-center">Loading exam…</div>;
+  if (!exam || !loaded) return <div className="p-12 text-center">Loading exam…</div>;
+  if (items.length === 0) return (
+    <div className="p-12 text-center space-y-3">
+      <p className="font-medium">This test has no complete questions to display.</p>
+      <Button onClick={() => navigate({ to: "/dashboard" })}>Back to Dashboard</Button>
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col">
