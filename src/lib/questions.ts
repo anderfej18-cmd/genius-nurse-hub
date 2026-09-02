@@ -15,7 +15,7 @@ export function questionIssues(question: QuestionFields): string[] {
   // Some malformed uploads contain only the question number (for example
   // `34.`). They render as a card with no actual question, so treat them as
   // broken just like an empty stem.
-  if (!questionText || /^(?:question\s*)?\d+[.)]?$/i.test(questionText)) {
+  if (!questionText || /^(?:question\s*)?\d+\s*[.)]?$/i.test(questionText)) {
     issues.push("question text");
   }
   for (const key of OPTION_KEYS) {
