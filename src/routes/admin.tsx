@@ -620,7 +620,7 @@ function UsersTab() {
   const [exams, setExams] = useState<Record<string, { avg: number; n: number }>>({});
   const [filter, setFilter] = useState("");
   const [assignFor, setAssignFor] = useState<string | null>(null);
-  const [assignTier, setAssignTier] = useState<"erudite" | "scholar">("erudite");
+  const [assignTier, setAssignTier] = useState<"novice" | "erudite" | "scholar">("erudite");
   const [assignDays, setAssignDays] = useState<number>(30);
 
   const load = async () => {
@@ -662,6 +662,57 @@ function UsersTab() {
     return (u.email ?? "").toLowerCase().includes(q) || (u.username ?? "").toLowerCase().includes(q);
   });
 
+  const tierGroups = [
+    { tier: "novice", label: "Novice", description: "Default access" },
+    { tier: "scholar", label: "Scholar", description: "Unlimited daily questions" },
+    { tier: "erudite", label: "Erudite", description: "Expanded daily access" },
+  ] as const;
+
+  const renderUser = (u: UserRow) => (
+    <div key={u.id} className="py-3 px-4 space-y-2">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="text-sm min-w-0">
+          <p className="font-medium break-words">{u.username ?? "—"} <span className="text-muted-foreground">({u.email})</span></p>
+          <p className="text-xs text-muted-foreground">
+            <Badge variant="secondary" className="mr-1 capitalize">{u.tier}</Badge>
+            {u.expiry_date && `expires ${new Date(u.expiry_date).toLocaleDateString()}`}
+            {exams[u.id] && ` · avg ${exams[u.id].avg.toFixed(1)}% (${exams[u.id].n} tests)`}
+          </p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Button size="sm" variant="outline" onClick={() => { setAssignFor(assignFor === u.id ? null : u.id); }}>
+            {assignFor === u.id ? "Cancel" : "Assign Tier"}
+          </Button>
+          {u.tier !== "novice" && (
+            <Button size="sm" variant="destructive" onClick={() => reset(u.id)}>Revoke</Button>
+          )}
+        </div>
+      </div>
+      {assignFor === u.id && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-3 rounded bg-muted/40">
+          <div>
+            <Label className="text-xs">Tier</Label>
+            <Select value={assignTier} onValueChange={(v) => setAssignTier(v as "novice" | "erudite" | "scholar")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="novice">Novice</SelectItem>
+                <SelectItem value="erudite">Erudite (500/day, 150/session)</SelectItem>
+                <SelectItem value="scholar">Scholar (unlimited/day, 250/session)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Duration (days, 0 = no expiry)</Label>
+            <Input type="number" min={0} value={assignDays} onChange={(e) => setAssignDays(Number(e.target.value))} />
+          </div>
+          <div className="flex items-end">
+            <Button size="sm" className="bg-hero w-full" onClick={assign}>Confirm Assign</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="mt-4 space-y-3">
       <Card className="p-5 bg-hero text-primary-foreground shadow-glow">
@@ -669,52 +720,32 @@ function UsersTab() {
         <p className="text-4xl font-bold">{rows.length}</p>
       </Card>
       <Input placeholder="Search by name or email…" value={filter} onChange={(e) => setFilter(e.target.value)} />
-      <Card className="p-4 divide-y">
-        {filtered.length === 0 && <p className="p-6 text-center text-muted-foreground text-sm">No users.</p>}
-        {filtered.map(u => (
-          <div key={u.id} className="py-3 space-y-2">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="text-sm">
-                <p className="font-medium">{u.username ?? "—"} <span className="text-muted-foreground">({u.email})</span></p>
-                <p className="text-xs text-muted-foreground">
-                  <Badge variant="secondary" className="mr-1">{u.tier}</Badge>
-                  {u.expiry_date && `expires ${new Date(u.expiry_date).toLocaleDateString()}`}
-                  {exams[u.id] && ` · avg ${exams[u.id].avg.toFixed(1)}% (${exams[u.id].n} tests)`}
-                </p>
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <Button size="sm" variant="outline" onClick={() => { setAssignFor(assignFor === u.id ? null : u.id); }}>
-                  {assignFor === u.id ? "Cancel" : "Assign Tier"}
-                </Button>
-                {u.tier !== "novice" && (
-                  <Button size="sm" variant="destructive" onClick={() => reset(u.id)}>Revoke</Button>
-                )}
-              </div>
-            </div>
-            {assignFor === u.id && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-3 rounded bg-muted/40">
-                <div>
-                  <Label className="text-xs">Tier</Label>
-                  <Select value={assignTier} onValueChange={(v) => setAssignTier(v as "erudite" | "scholar")}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="erudite">Erudite (500/day, 150/session)</SelectItem>
-                      <SelectItem value="scholar">Scholar (unlimited/day, 250/session)</SelectItem>
-                    </SelectContent>
-                  </Select>
+      <div className="space-y-3" aria-label="Users grouped by subscription tier">
+        {tierGroups.map(({ tier, label, description }) => {
+          const totalInTier = rows.filter(u => u.tier === tier).length;
+          const visibleInTier = filtered.filter(u => u.tier === tier);
+          return (
+            <details key={tier} open className="rounded-lg border border-border overflow-hidden">
+              <summary className="cursor-pointer list-none px-4 py-3 bg-muted/30 hover:bg-muted/50">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{label} ({totalInTier})</p>
+                    <p className="text-xs text-muted-foreground">{description}</p>
+                  </div>
+                  <span className="text-muted-foreground text-lg" aria-hidden="true">⌄</span>
                 </div>
-                <div>
-                  <Label className="text-xs">Duration (days, 0 = no expiry)</Label>
-                  <Input type="number" min={0} value={assignDays} onChange={(e) => setAssignDays(Number(e.target.value))} />
-                </div>
-                <div className="flex items-end">
-                  <Button size="sm" className="bg-hero w-full" onClick={assign}>Confirm Assign</Button>
-                </div>
+              </summary>
+              <div className="divide-y">
+                {visibleInTier.length === 0 ? (
+                  <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+                    {totalInTier === 0 ? "No users in this tier." : "No matching users in this tier."}
+                  </p>
+                ) : visibleInTier.map(renderUser)}
               </div>
-            )}
-          </div>
-        ))}
-      </Card>
+            </details>
+          );
+        })}
+      </div>
     </div>
   );
 }
