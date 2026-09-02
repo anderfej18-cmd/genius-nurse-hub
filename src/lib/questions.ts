@@ -11,11 +11,17 @@ const OPTION_KEYS = ["option_a", "option_b", "option_c", "option_d"] as const;
 
 export function questionIssues(question: QuestionFields): string[] {
   const issues: string[] = [];
-  if (!question.question_text?.trim()) issues.push("question text");
+  const questionText = question.question_text?.trim() ?? "";
+  // Some malformed uploads contain only the question number (for example
+  // `34.`). They render as a card with no actual question, so treat them as
+  // broken just like an empty stem.
+  if (!questionText || /^(?:question\s*)?\d+\s*[.)]?$/i.test(questionText)) {
+    issues.push("question text");
+  }
   for (const key of OPTION_KEYS) {
     if (!question[key]?.trim()) issues.push(`${key.replace("option_", "Option ").toUpperCase()}`);
   }
-  if (!question.correct_answer || !["A", "B", "C", "D"].includes(question.correct_answer.toUpperCase())) {
+  if (!question.correct_answer || !["A", "B", "C", "D"].includes(question.correct_answer.trim().toUpperCase())) {
     issues.push("correct answer");
   }
   return issues;
