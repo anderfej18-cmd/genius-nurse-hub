@@ -451,6 +451,16 @@ export type Database = {
         }
         Returns: string
       }
+      central_admin_search_users: {
+        Args: { _search: string }
+        Returns: {
+          email: string
+          is_admin: boolean
+          tier: Database["public"]["Enums"]["user_tier"]
+          user_id: string
+          username: string
+        }[]
+      }
       check_expire_tier: { Args: { _user_id: string }; Returns: undefined }
       daily_reset: { Args: never; Returns: undefined }
       flag_receipt_and_revoke: {
@@ -464,6 +474,13 @@ export type Database = {
           avg_score: number
           correct: number
           user_id: string
+          username: string
+        }[]
+      }
+      get_subadmin_user_directory: {
+        Args: never
+        Returns: {
+          tier: Database["public"]["Enums"]["user_tier"]
           username: string
         }[]
       }
