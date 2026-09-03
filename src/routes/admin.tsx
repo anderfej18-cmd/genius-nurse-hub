@@ -624,8 +624,18 @@ function UsersTab() {
   const [assignDays, setAssignDays] = useState<number>(30);
 
   const load = async () => {
-    const { data } = await supabase.from("profiles").select("id, email, username, tier, expiry_date");
-    setRows((data as UserRow[]) ?? []);
+    const pageSize = 1000;
+    const allUsers: UserRow[] = [];
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase.from("profiles")
+        .select("id, email, username, tier, expiry_date")
+        .order("created_at", { ascending: true })
+        .range(from, from + pageSize - 1);
+      if (error) return toast.error(error.message);
+      allUsers.push(...((data ?? []) as UserRow[]));
+      if (!data || data.length < pageSize) break;
+    }
+    setRows(allUsers);
     const { data: ex } = await supabase.from("exams").select("user_id, score_pct").eq("status", "completed").not("score_pct", "is", null);
     const agg: Record<string, { sum: number; n: number }> = {};
     (ex ?? []).forEach((e) => {
