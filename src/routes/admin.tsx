@@ -16,7 +16,7 @@ import { LeaderboardTable } from "@/components/LeaderboardTable";
 import { fetchTopicCounts } from "@/lib/topics";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { questionIssues, type QuestionFields } from "@/lib/questions";
-import { AlertTriangle, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, Pencil, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({ component: Admin });
 
@@ -34,7 +34,7 @@ function Admin() {
     <>
       <AppHeader />
       <main className="container mx-auto px-4 py-8 max-w-5xl">
-        <h1 className="text-3xl font-bold mb-6">Admin Panel</h1>
+        <h1 className="text-3xl font-bold mb-6">{isCentralAdmin ? "Central Admin Panel" : "Admin Section"}</h1>
         <Tabs defaultValue="questions">
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="questions">Questions</TabsTrigger>
@@ -43,7 +43,9 @@ function Admin() {
             <TabsTrigger value="leaderboards">Leaderboards</TabsTrigger>
             {isCentralAdmin && <TabsTrigger value="pricing">Pricing &amp; Duration</TabsTrigger>}
             {isCentralAdmin && <TabsTrigger value="users">Users</TabsTrigger>}
+            {isCentralAdmin && <TabsTrigger value="admin-access">Assign Admin</TabsTrigger>}
             {isCentralAdmin && <TabsTrigger value="codes">Admin Codes</TabsTrigger>}
+            {!isCentralAdmin && <TabsTrigger value="sub-users">Users</TabsTrigger>}
             {!isCentralAdmin && <TabsTrigger value="join">Become Admin</TabsTrigger>}
           </TabsList>
           <TabsContent value="questions"><QuestionsTab /></TabsContent>
@@ -52,7 +54,9 @@ function Admin() {
           <TabsContent value="leaderboards"><LeaderboardsTab /></TabsContent>
           {isCentralAdmin && <TabsContent value="pricing"><PricingTab /></TabsContent>}
           {isCentralAdmin && <TabsContent value="users"><UsersTab /></TabsContent>}
+           {isCentralAdmin && <TabsContent value="admin-access"><AdminAccessTab /></TabsContent>}
           {isCentralAdmin && <TabsContent value="codes"><CodesTab /></TabsContent>}
+           {!isCentralAdmin && <TabsContent value="sub-users"><SubAdminUsersTab /></TabsContent>}
           {!isCentralAdmin && <TabsContent value="join"><JoinTab /></TabsContent>}
         </Tabs>
 
