@@ -1,0 +1,4 @@
+- [ ] Add Central Admin admin-role search, grant/revoke actions, and admin count metric
+- [ ] Add secure Sub-Admin user directory with username-only tier breakdown
+- [ ] Preserve full question management for Sub-Admins and update navigation label
+- [ ] Verify role controls and privacy-safe user view
