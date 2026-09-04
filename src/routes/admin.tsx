@@ -48,14 +48,12 @@ function Admin() {
           </TabsList>
           <TabsContent value="questions"><QuestionsTab /></TabsContent>
           <TabsContent value="audit"><BrokenQuestionsTab /></TabsContent>
-          <TabsContent value="payments"><PaymentsTab /></TabsContent>
+          {isCentralAdmin && <TabsContent value="payments"><PaymentsTab /></TabsContent>}
           <TabsContent value="leaderboards"><LeaderboardsTab /></TabsContent>
           {isCentralAdmin && <TabsContent value="pricing"><PricingTab /></TabsContent>}
           {isCentralAdmin && <TabsContent value="users"><UsersTab /></TabsContent>}
            {isCentralAdmin && <TabsContent value="admin-access"><AdminAccessTab /></TabsContent>}
-          {isCentralAdmin && <TabsContent value="codes"><CodesTab /></TabsContent>}
-           {!isCentralAdmin && <TabsContent value="sub-users"><SubAdminUsersTab /></TabsContent>}
-          {!isCentralAdmin && <TabsContent value="join"><JoinTab /></TabsContent>}
+          {!isCentralAdmin && <TabsContent value="sub-users"><SubAdminUsersTab /></TabsContent>}
         </Tabs>
 
       </main>
