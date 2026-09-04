@@ -975,52 +975,6 @@ function SubAdminUsersTab() {
   );
 }
 
-function CodesTab() {
-  const [rows, setRows] = useState<Array<{ id: string; code: string; used_by: string | null; used_at: string | null }>>([]);
-  const load = async () => {
-    const { data } = await supabase.from("admin_codes").select("*").order("created_at", { ascending: false });
-    setRows(data ?? []);
-  };
-  useEffect(() => { load(); }, []);
-  const gen = async () => {
-    const code = String(Math.floor(1000 + Math.random() * 9000));
-    const { error } = await supabase.from("admin_codes").insert({ code });
-    if (error) return toast.error(error.message);
-    toast.success(`Generated code: ${code}`);
-    load();
-  };
-  return (
-    <div className="mt-4 space-y-3">
-      <Button onClick={gen} className="bg-hero">Generate New 4-Digit Code</Button>
-      <Card className="p-4 divide-y">
-        {rows.map(r => (
-          <div key={r.id} className="py-2 flex justify-between text-sm">
-            <span className="font-mono font-bold">{r.code}</span>
-            <span className="text-muted-foreground">{r.used_by ? `Used ${new Date(r.used_at!).toLocaleString()}` : "Available"}</span>
-          </div>
-        ))}
-      </Card>
-    </div>
-  );
-}
-
-function JoinTab() {
-  const [code, setCode] = useState("");
-  const { refresh } = useAuth();
-  const submit = async () => {
-    const { data, error } = await supabase.rpc("redeem_admin_code", { _code: code });
-    if (error) return toast.error(error.message);
-    if (data) { toast.success("You are now an Admin!"); refresh(); }
-    else toast.error("Invalid or used code");
-  };
-  return (
-    <Card className="p-5 mt-4 max-w-sm">
-      <Label>Enter 4-digit admin code</Label>
-      <Input value={code} onChange={(e) => setCode(e.target.value)} maxLength={4} className="font-mono text-center text-xl mt-2" />
-      <Button onClick={submit} className="bg-hero w-full mt-3">Redeem</Button>
-    </Card>
-  );
-}
 
 function LeaderboardsTab() {
   return (
