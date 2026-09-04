@@ -39,14 +39,12 @@ function Admin() {
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="questions">Questions</TabsTrigger>
             <TabsTrigger value="audit">Audit / Broken Questions</TabsTrigger>
-            <TabsTrigger value="payments">Upgrades</TabsTrigger>
+            {isCentralAdmin && <TabsTrigger value="payments">Upgrades</TabsTrigger>}
             <TabsTrigger value="leaderboards">Leaderboards</TabsTrigger>
             {isCentralAdmin && <TabsTrigger value="pricing">Pricing &amp; Duration</TabsTrigger>}
             {isCentralAdmin && <TabsTrigger value="users">Users</TabsTrigger>}
             {isCentralAdmin && <TabsTrigger value="admin-access">Assign Admin</TabsTrigger>}
-            {isCentralAdmin && <TabsTrigger value="codes">Admin Codes</TabsTrigger>}
             {!isCentralAdmin && <TabsTrigger value="sub-users">Users</TabsTrigger>}
-            {!isCentralAdmin && <TabsTrigger value="join">Become Admin</TabsTrigger>}
           </TabsList>
           <TabsContent value="questions"><QuestionsTab /></TabsContent>
           <TabsContent value="audit"><BrokenQuestionsTab /></TabsContent>
