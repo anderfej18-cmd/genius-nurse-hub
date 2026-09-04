@@ -764,6 +764,221 @@ function UsersTab() {
   );
 }
 
+interface AdminAccessRow {
+  id: string;
+  username: string | null;
+  email: string | null;
+  isAdmin: boolean;
+  isCentralAdmin: boolean;
+}
+
+function AdminAccessTab() {
+  const [search, setSearch] = useState("");
+  const [rows, setRows] = useState<AdminAccessRow[]>([]);
+  const [adminCount, setAdminCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const loadAdminCount = async () => {
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("user_id, role")
+      .in("role", ["admin", "central_admin"]);
+    if (error) return toast.error(error.message);
+    setAdminCount(new Set((data ?? []).map((row) => row.user_id)).size);
+  };
+
+  const searchUsers = async (value: string) => {
+    const term = value.trim();
+    if (!term) {
+      setRows([]);
+      return;
+    }
+    setLoading(true);
+    const { data: profiles, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, username, email")
+      .ilike("username", `%${term}%`)
+      .order("username", { ascending: true })
+      .limit(25);
+    if (profileError) {
+      setLoading(false);
+      return toast.error(profileError.message);
+    }
+
+    const ids = (profiles ?? []).map((profile) => profile.id);
+    const { data: roles, error: roleError } = ids.length
+      ? await supabase.from("user_roles").select("user_id, role").in("user_id", ids)
+      : { data: [], error: null };
+    setLoading(false);
+    if (roleError) return toast.error(roleError.message);
+
+    const roleMap = new Map<string, Set<string>>();
+    (roles ?? []).forEach((role) => {
+      const current = roleMap.get(role.user_id) ?? new Set<string>();
+      current.add(role.role);
+      roleMap.set(role.user_id, current);
+    });
+    setRows((profiles ?? []).map((profile) => {
+      const userRoles = roleMap.get(profile.id) ?? new Set<string>();
+      return {
+        ...profile,
+        isAdmin: userRoles.has("admin") || userRoles.has("central_admin"),
+        isCentralAdmin: userRoles.has("central_admin"),
+      };
+    }));
+  };
+
+  useEffect(() => {
+    loadAdminCount();
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => searchUsers(search), 180);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  const toggleAdmin = async (row: AdminAccessRow) => {
+    if (row.isCentralAdmin) return;
+    setBusyId(row.id);
+    const result = row.isAdmin
+      ? await supabase.from("user_roles").delete().eq("user_id", row.id).eq("role", "admin")
+      : await supabase.from("user_roles").insert({ user_id: row.id, role: "admin" });
+    setBusyId(null);
+    if (result.error) return toast.error(result.error.message);
+    toast.success(row.isAdmin ? "Admin access revoked" : "Admin access granted");
+    await loadAdminCount();
+    await searchUsers(search);
+  };
+
+  return (
+    <div className="mt-4 space-y-4">
+      <Card className="p-5 bg-hero text-primary-foreground shadow-glow">
+        <p className="text-xs uppercase opacity-80 tracking-wide">Total number of admins</p>
+        <p className="text-4xl font-bold">{adminCount}</p>
+        <p className="text-sm opacity-80 mt-1">Central Admins and Admins with access to the Admin Section</p>
+      </Card>
+
+      <Card className="p-5 space-y-4">
+        <div>
+          <h2 className="font-semibold">Assign Admin</h2>
+          <p className="text-sm text-muted-foreground mt-1">Search registered users by username to manage Admin access.</p>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by username…"
+            aria-label="Search registered users by username"
+            className="pl-9"
+          />
+        </div>
+        {!search.trim() ? (
+          <p className="py-5 text-center text-sm text-muted-foreground">Start typing a username to find a registered user.</p>
+        ) : loading ? (
+          <p className="py-5 text-center text-sm text-muted-foreground">Searching…</p>
+        ) : rows.length === 0 ? (
+          <p className="py-5 text-center text-sm text-muted-foreground">No registered users match that username.</p>
+        ) : (
+          <div className="divide-y rounded-md border">
+            {rows.map((row) => (
+              <div key={row.id} className="flex items-center justify-between gap-4 px-4 py-3 flex-wrap">
+                <div className="min-w-0">
+                  <p className="font-medium break-words">{row.username || "Unnamed user"}</p>
+                  <p className="text-xs text-muted-foreground break-all">{row.email || "No email address"}</p>
+                  {row.isCentralAdmin && <Badge variant="secondary" className="mt-1">Central Admin</Badge>}
+                </div>
+                <Button
+                  size="sm"
+                  variant={row.isAdmin ? "destructive" : "default"}
+                  disabled={row.isCentralAdmin || busyId === row.id}
+                  onClick={() => toggleAdmin(row)}
+                >
+                  {row.isCentralAdmin ? <><ShieldCheck className="mr-1 h-4 w-4" /> Protected</> : row.isAdmin ? <><ShieldOff className="mr-1 h-4 w-4" /> Revoke Admin</> : <><ShieldCheck className="mr-1 h-4 w-4" /> Assign Admin</>}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+interface SubAdminUserRow {
+  username: string | null;
+  tier: "novice" | "erudite" | "scholar";
+}
+
+function SubAdminUsersTab() {
+  const [rows, setRows] = useState<SubAdminUserRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.rpc("get_subadmin_user_directory" as never);
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    setRows((data ?? []) as SubAdminUserRow[]);
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const tierGroups = [
+    { tier: "novice", label: "Novice", description: "Default access" },
+    { tier: "scholar", label: "Scholar", description: "Unlimited daily questions" },
+    { tier: "erudite", label: "Erudite", description: "Expanded daily access" },
+  ] as const;
+
+  return (
+    <div className="mt-4 space-y-4">
+      <Card className="p-5 bg-hero text-primary-foreground shadow-glow">
+        <p className="text-xs uppercase opacity-80 tracking-wide">Total users</p>
+        <p className="text-4xl font-bold">{rows.length}</p>
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+          {tierGroups.map(({ tier, label }) => (
+            <div key={tier} className="rounded-md bg-background/15 px-2 py-2">
+              <p className="text-xs opacity-80">{label}</p>
+              <p className="text-xl font-semibold">{rows.filter((row) => row.tier === tier).length}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <div className="space-y-3" aria-label="Users grouped by subscription tier">
+        {loading ? <Card className="p-6 text-center text-sm text-muted-foreground">Loading users…</Card> : tierGroups.map(({ tier, label, description }) => {
+          const users = rows.filter((row) => row.tier === tier);
+          return (
+            <details key={tier} open className="rounded-lg border border-border overflow-hidden">
+              <summary className="cursor-pointer list-none px-4 py-3 bg-muted/30 hover:bg-muted/50">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{label} ({users.length})</p>
+                    <p className="text-xs text-muted-foreground">{description}</p>
+                  </div>
+                  <span className="text-muted-foreground text-lg" aria-hidden="true">⌄</span>
+                </div>
+              </summary>
+              <div className="divide-y">
+                {users.length === 0 ? (
+                  <p className="px-4 py-6 text-center text-sm text-muted-foreground">No users in this tier.</p>
+                ) : users.map((row, index) => (
+                  <p key={`${row.username ?? "user"}-${index}`} className="px-4 py-3 text-sm font-medium break-words">
+                    {row.username || "Unnamed user"}
+                  </p>
+                ))}
+              </div>
+            </details>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function CodesTab() {
   const [rows, setRows] = useState<Array<{ id: string; code: string; used_by: string | null; used_at: string | null }>>([]);
   const load = async () => {
