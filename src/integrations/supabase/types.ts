@@ -71,6 +71,209 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_test_attempt_answers: {
+        Row: {
+          attempt_id: string
+          custom_test_question_id: string
+          id: string
+          is_correct: boolean
+          position: number
+          user_answer: string | null
+        }
+        Insert: {
+          attempt_id: string
+          custom_test_question_id: string
+          id?: string
+          is_correct?: boolean
+          position: number
+          user_answer?: string | null
+        }
+        Update: {
+          attempt_id?: string
+          custom_test_question_id?: string
+          id?: string
+          is_correct?: boolean
+          position?: number
+          user_answer?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_test_attempt_answers_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "custom_test_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_test_attempt_answers_custom_test_question_id_fkey"
+            columns: ["custom_test_question_id"]
+            isOneToOne: false
+            referencedRelation: "custom_test_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_test_attempts: {
+        Row: {
+          access_hash: string
+          completed_at: string | null
+          correct_count: number | null
+          custom_test_id: string
+          email: string
+          id: string
+          score_pct: number | null
+          started_at: string
+          status: string
+          total_questions: number
+          user_id: string | null
+        }
+        Insert: {
+          access_hash: string
+          completed_at?: string | null
+          correct_count?: number | null
+          custom_test_id: string
+          email: string
+          id?: string
+          score_pct?: number | null
+          started_at?: string
+          status?: string
+          total_questions: number
+          user_id?: string | null
+        }
+        Update: {
+          access_hash?: string
+          completed_at?: string | null
+          correct_count?: number | null
+          custom_test_id?: string
+          email?: string
+          id?: string
+          score_pct?: number | null
+          started_at?: string
+          status?: string
+          total_questions?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_test_attempts_custom_test_id_fkey"
+            columns: ["custom_test_id"]
+            isOneToOne: false
+            referencedRelation: "custom_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_test_questions: {
+        Row: {
+          correct_answer: string
+          custom_test_id: string
+          id: string
+          imported_at: string | null
+          imported_to_bank: boolean
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          position: number
+          question_text: string
+          rationale: string | null
+          source_kind: string
+          source_question_id: string | null
+        }
+        Insert: {
+          correct_answer: string
+          custom_test_id: string
+          id?: string
+          imported_at?: string | null
+          imported_to_bank?: boolean
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          position: number
+          question_text: string
+          rationale?: string | null
+          source_kind?: string
+          source_question_id?: string | null
+        }
+        Update: {
+          correct_answer?: string
+          custom_test_id?: string
+          id?: string
+          imported_at?: string | null
+          imported_to_bank?: boolean
+          option_a?: string
+          option_b?: string
+          option_c?: string
+          option_d?: string
+          position?: number
+          question_text?: string
+          rationale?: string | null
+          source_kind?: string
+          source_question_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_test_questions_custom_test_id_fkey"
+            columns: ["custom_test_id"]
+            isOneToOne: false
+            referencedRelation: "custom_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_test_questions_source_question_id_fkey"
+            columns: ["source_question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_tests: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          expires_at: string
+          id: string
+          owner_id: string
+          source_mode: string
+          status: Database["public"]["Enums"]["custom_test_status"]
+          title: string
+          token_hash: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_minutes: number
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          expires_at: string
+          id?: string
+          owner_id: string
+          source_mode?: string
+          status?: Database["public"]["Enums"]["custom_test_status"]
+          title: string
+          token_hash: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          expires_at?: string
+          id?: string
+          owner_id?: string
+          source_mode?: string
+          status?: Database["public"]["Enums"]["custom_test_status"]
+          title?: string
+          token_hash?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       exam_answers: {
         Row: {
           exam_id: string
@@ -434,6 +637,14 @@ export type Database = {
         }
         Returns: string
       }
+      add_custom_test_to_question_bank: {
+        Args: {
+          _custom_test_id: string
+          _exam_type: Database["public"]["Enums"]["exam_type"]
+          _topic: string
+        }
+        Returns: number
+      }
       approve_receipt: { Args: { _receipt_id: string }; Returns: undefined }
       assign_user_tier: {
         Args: {
@@ -462,10 +673,58 @@ export type Database = {
         }[]
       }
       check_expire_tier: { Args: { _user_id: string }; Returns: undefined }
+      claim_custom_test_attempt: {
+        Args: { _access_hash: string; _attempt_id: string }
+        Returns: boolean
+      }
       daily_reset: { Args: never; Returns: undefined }
       flag_receipt_and_revoke: {
         Args: { _reason: string; _receipt_id: string }
         Returns: undefined
+      }
+      get_custom_test_analytics: {
+        Args: { _custom_test_id: string }
+        Returns: {
+          average_score: number
+          fail_count: number
+          participant_count: number
+          pass_count: number
+          pass_pct: number
+        }[]
+      }
+      get_custom_test_attempt_results: {
+        Args: { _access_hash: string; _attempt_id: string }
+        Returns: {
+          correct_answer: string
+          is_correct: boolean
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_id: string
+          question_position: number
+          question_text: string
+          rationale: string
+          user_answer: string
+        }[]
+      }
+      get_custom_test_by_token: {
+        Args: { _token_hash: string }
+        Returns: {
+          description: string
+          duration_minutes: number
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          expires_at: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_id: string
+          question_position: number
+          question_text: string
+          test_id: string
+          title: string
+        }[]
       }
       get_daily_leaderboard: {
         Args: never
@@ -512,10 +771,32 @@ export type Database = {
         Returns: boolean
       }
       redeem_admin_code: { Args: { _code: string }; Returns: boolean }
+      republish_custom_test: {
+        Args: { _custom_test_id: string; _expires_at: string }
+        Returns: string
+      }
       reset_user_to_novice: { Args: { _user_id: string }; Returns: undefined }
+      start_custom_test_attempt: {
+        Args: { _access_hash: string; _email: string; _token_hash: string }
+        Returns: {
+          attempt_id: string
+          duration_minutes: number
+          expires_at: string
+          total_questions: number
+        }[]
+      }
+      submit_custom_test_attempt: {
+        Args: { _access_hash: string; _answers: Json; _attempt_id: string }
+        Returns: {
+          correct_count: number
+          score_pct: number
+          total_questions: number
+        }[]
+      }
     }
     Enums: {
       app_role: "central_admin" | "admin" | "user"
+      custom_test_status: "draft" | "published" | "archived"
       exam_type: "RN" | "RM"
       receipt_status: "pending" | "approved" | "rejected"
       user_tier: "novice" | "erudite" | "scholar"
@@ -647,6 +928,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["central_admin", "admin", "user"],
+      custom_test_status: ["draft", "published", "archived"],
       exam_type: ["RN", "RM"],
       receipt_status: ["pending", "approved", "rejected"],
       user_tier: ["novice", "erudite", "scholar"],
