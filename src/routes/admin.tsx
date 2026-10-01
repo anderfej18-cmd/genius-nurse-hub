@@ -16,7 +16,10 @@ import { LeaderboardTable } from "@/components/LeaderboardTable";
 import { fetchTopicCounts } from "@/lib/topics";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { questionIssues, type QuestionFields } from "@/lib/questions";
-import { AlertTriangle, Pencil, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
+import { createCustomTest, importCustomTestQuestions, listCustomTests, republishCustomTest } from "@/lib/custom-tests.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AlertTriangle, Copy, Link2, Pencil, Plus, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({ component: Admin });
 
@@ -38,6 +41,7 @@ function Admin() {
         <Tabs defaultValue="questions">
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="questions">Questions</TabsTrigger>
+            <TabsTrigger value="custom-tests">Create a Test</TabsTrigger>
             <TabsTrigger value="audit">Audit / Broken Questions</TabsTrigger>
             {isCentralAdmin && <TabsTrigger value="payments">Upgrades</TabsTrigger>}
             <TabsTrigger value="leaderboards">Leaderboards</TabsTrigger>
@@ -47,6 +51,7 @@ function Admin() {
             {!isCentralAdmin && <TabsTrigger value="sub-users">Users</TabsTrigger>}
           </TabsList>
           <TabsContent value="questions"><QuestionsTab /></TabsContent>
+          <TabsContent value="custom-tests"><CustomTestsTab /></TabsContent>
           <TabsContent value="audit"><BrokenQuestionsTab /></TabsContent>
           {isCentralAdmin && <TabsContent value="payments"><PaymentsTab /></TabsContent>}
           <TabsContent value="leaderboards"><LeaderboardsTab /></TabsContent>
