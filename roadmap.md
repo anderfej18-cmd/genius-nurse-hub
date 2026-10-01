@@ -2,3 +2,5 @@
 - [ ] Add secure Sub-Admin user directory with username-only tier breakdown
 - [ ] Preserve full question management for Sub-Admins and update navigation label
 - [ ] Verify role controls and privacy-safe user view
+- [ ] Complete the approved shared custom-test creation, delivery, results, and analytics flow
+- [ ] Diagnose and fix account tier refresh after successful Paystack payment
