@@ -120,6 +120,254 @@ interface LastUpload {
 
 const LAST_UPLOAD_KEY = "ng.lastQuestionUpload";
 
+interface CustomTestRecord {
+  id: string;
+  title: string;
+  description: string | null;
+  exam_type: "RN" | "RM";
+  source_mode: "existing" | "upload";
+  duration_minutes: number;
+  expires_at: string;
+  status: "draft" | "published" | "archived";
+  question_count: number;
+  analytics: { participant_count: number; pass_count: number; fail_count: number; pass_pct: number; average_score: number } | null;
+  attempts: Array<{ id: string; email: string; score_pct: number | null; correct_count: number | null; total_questions: number; completed_at: string | null }>;
+}
+
+function CustomTestsTab() {
+  const createTest = useServerFn(createCustomTest);
+  const fetchTests = useServerFn(listCustomTests);
+  const importQuestions = useServerFn(importCustomTestQuestions);
+  const republish = useServerFn(republishCustomTest);
+  const [mode, setMode] = useState<"existing" | "upload">("existing");
+  const [examType, setExamType] = useState<"RN" | "RM">("RN");
+  const [topics, setTopics] = useState<Record<string, number>>({});
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [available, setAvailable] = useState(0);
+  const [quantity, setQuantity] = useState(10);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [duration, setDuration] = useState(60);
+  const [expiresAt, setExpiresAt] = useState("");
+  const [uploadTopic, setUploadTopic] = useState("");
+  const [uploaded, setUploaded] = useState<ParsedQ[]>([]);
+  const [tests, setTests] = useState<CustomTestRecord[]>([]);
+  const [shareLinks, setShareLinks] = useState<Record<string, string>>({});
+  const [importTopics, setImportTopics] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+
+  const loadTests = async () => {
+    try { setTests(await fetchTests() as CustomTestRecord[]); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Could not load your tests."); }
+  };
+
+  useEffect(() => { void loadTests(); }, []);
+  useEffect(() => {
+    let active = true;
+    void fetchTopicCounts(examType).then((counts) => {
+      if (active) { setTopics(counts); setSelectedTopics([]); setAvailable(0); }
+    });
+    return () => { active = false; };
+  }, [examType]);
+
+  useEffect(() => {
+    let active = true;
+    const loadAvailable = async () => {
+      if (!selectedTopics.length) { setAvailable(0); return; }
+      let from = 0;
+      let total = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await supabase.from("questions")
+          .select("id, question_text, option_a, option_b, option_c, option_d, correct_answer, rationale")
+          .eq("exam_type", examType).in("topic", selectedTopics)
+          .order("id", { ascending: true }).range(from, from + pageSize - 1);
+        if (error) { if (active) toast.error(error.message); return; }
+        total += (data ?? []).filter((row) => isCompleteQuestion(row)).length;
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+      }
+      if (active) setAvailable(total);
+    };
+    void loadAvailable();
+    return () => { active = false; };
+  }, [selectedTopics, examType]);
+
+  const toggleTopic = (topic: string) => setSelectedTopics((current) =>
+    current.includes(topic) ? current.filter((entry) => entry !== topic) : [...current, topic],
+  );
+
+  const readUpload = async (file?: File) => {
+    if (!file) return;
+    const parsed = parseTxt(await file.text());
+    if (!parsed.length) { setUploaded([]); return toast.error("No complete questions found in the TXT file."); }
+    if (parsed.length > 250) { setUploaded([]); return toast.error("A test can contain no more than 250 questions."); }
+    setUploaded(parsed);
+    setQuantity(parsed.length);
+    toast.success(`${parsed.length} questions ready for this test.`);
+  };
+
+  const create = async () => {
+    const number = mode === "upload" ? uploaded.length : quantity;
+    if (!title.trim() || !expiresAt || !duration || number < 1) return toast.error("Complete every required field before creating the test.");
+    if (mode === "existing" && (!selectedTopics.length || number > available)) return toast.error(`Only ${available} complete questions are available for the selected areas.`);
+    if (mode === "upload" && (!uploadTopic.trim() || !uploaded.length)) return toast.error("Add a subcategory name and a valid TXT file.");
+    if (number > 250) return toast.error("A test can contain no more than 250 questions.");
+    const localExpiry = new Date(expiresAt);
+    if (!Number.isFinite(localExpiry.getTime()) || localExpiry.getTime() <= Date.now()) return toast.error("Choose a link expiry in the future.");
+    setBusy(true);
+    try {
+      let sourceQuestions: Array<ParsedQ & { id?: string }>;
+      if (mode === "upload") sourceQuestions = uploaded;
+      else {
+        let from = 0;
+        const pool: Array<ParsedQ & { id: string }> = [];
+        const pageSize = 1000;
+        while (true) {
+          const { data, error } = await supabase.from("questions")
+            .select("id, question_text, option_a, option_b, option_c, option_d, correct_answer, rationale")
+            .eq("exam_type", examType).in("topic", selectedTopics)
+            .order("id", { ascending: true }).range(from, from + pageSize - 1);
+          if (error) throw error;
+          pool.push(...((data ?? []).filter((row) => isCompleteQuestion(row)) as Array<ParsedQ & { id: string }>));
+          if (!data || data.length < pageSize) break;
+          from += pageSize;
+        }
+        if (quantity > pool.length) throw new Error(`Only ${pool.length} complete questions are available for the selected areas.`);
+        sourceQuestions = pool.sort(() => Math.random() - 0.5).slice(0, quantity);
+      }
+      const token = Array.from(crypto.getRandomValues(new Uint8Array(24)), (byte) => byte.toString(16).padStart(2, "0")).join("");
+      const hashBytes = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token)));
+      const tokenHash = Array.from(hashBytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+      const { id } = await createTest({ data: {
+        title, description, examType, sourceMode: mode, durationMinutes: Number(duration),
+        expiresAt: localExpiry.toISOString(), tokenHash,
+        questions: sourceQuestions.map((question) => ({
+          question_text: question.question_text, option_a: question.option_a, option_b: question.option_b,
+          option_c: question.option_c, option_d: question.option_d, correct_answer: question.correct_answer,
+          rationale: question.rationale, source_question_id: question.id ?? null,
+          source_kind: mode === "upload" ? "custom" : "existing",
+        })),
+      } });
+      const url = `${window.location.origin}/test/${token}`;
+      setShareLinks((current) => ({ ...current, [id]: url }));
+      toast.success("Test created and published.");
+      setTitle(""); setDescription(""); setSelectedTopics([]); setUploaded([]); setUploadTopic("");
+      await loadTests();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not create the test.");
+    } finally { setBusy(false); }
+  };
+
+  const copyLink = async (link: string) => {
+    try { await navigator.clipboard.writeText(link); toast.success("Test link copied."); }
+    catch { toast.error("Could not copy the link."); }
+  };
+
+  const issueNewLink = async (test: CustomTestRecord) => {
+    const expiry = new Date(expiresAt);
+    if (!expiresAt || !Number.isFinite(expiry.getTime()) || expiry.getTime() <= Date.now()) return toast.error("Choose a future expiry date above first.");
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(24)), (byte) => byte.toString(16).padStart(2, "0")).join("");
+    const hashBytes = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token)));
+    const tokenHash = Array.from(hashBytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    setBusy(true);
+    try {
+      await republish({ data: { testId: test.id, tokenHash, expiresAt: expiry.toISOString() } });
+      const url = `${window.location.origin}/test/${token}`;
+      setShareLinks((current) => ({ ...current, [test.id]: url }));
+      toast.success("A fresh test link is ready.");
+      await loadTests();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not republish this test."); }
+    finally { setBusy(false); }
+  };
+
+  const importToBank = async (test: CustomTestRecord) => {
+    const topic = importTopics[test.id]?.trim();
+    if (!topic) return toast.error("Enter a destination subcategory first.");
+    setBusy(true);
+    try {
+      const result = await importQuestions({ data: { testId: test.id, topic, examType: test.exam_type } });
+      toast.success(`${result.count} questions added to the ${test.exam_type} question bank.`);
+      await loadTests();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not add questions to the bank."); }
+    finally { setBusy(false); }
+  };
+
+  const selectedCount = mode === "upload" ? uploaded.length : Number(quantity);
+  const canCreate = Boolean(title.trim() && expiresAt && duration && selectedCount > 0 && selectedCount <= 250 && (mode === "upload" ? uploadTopic.trim() && uploaded.length : selectedTopics.length && selectedCount <= available));
+
+  return (
+    <div className="mt-4 space-y-6">
+      <Card className="p-5 space-y-5">
+        <header>
+          <h2 className="text-xl font-semibold">Create a Test</h2>
+          <p className="text-sm text-muted-foreground">Build a timed test and share a private link with candidates.</p>
+        </header>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div><Label htmlFor="custom-test-title">Test title</Label><Input id="custom-test-title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Maternal Health Review" /></div>
+          <div><Label htmlFor="custom-test-exam">Major category</Label><Select value={examType} onValueChange={(value) => setExamType(value as "RN" | "RM")}><SelectTrigger id="custom-test-exam"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="RN">RN — Registered Nurse</SelectItem><SelectItem value="RM">RM — Registered Midwife</SelectItem></SelectContent></Select></div>
+        </div>
+        <div><Label htmlFor="custom-test-description">Description (optional)</Label><Textarea id="custom-test-description" value={description} onChange={(event) => setDescription(event.target.value)} rows={2} /></div>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Question source">
+          <Button type="button" variant={mode === "existing" ? "default" : "outline"} onClick={() => setMode("existing")}>Question bank</Button>
+          <Button type="button" variant={mode === "upload" ? "default" : "outline"} onClick={() => setMode("upload")}>Upload TXT</Button>
+        </div>
+        {mode === "existing" ? (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap"><h3 className="font-medium">Choose subcategories</h3><p className="text-sm text-muted-foreground">{selectedTopics.length} selected · {available} complete questions available</p></div>
+            <div className="max-h-64 overflow-y-auto border divide-y">
+              {Object.entries(topics).sort(([a], [b]) => a.localeCompare(b)).map(([topic, count]) => (
+                <label key={topic} className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm">
+                  <Checkbox checked={selectedTopics.includes(topic)} onCheckedChange={() => toggleTopic(topic)} />
+                  <span className="flex-1">{topic}</span><span className="text-muted-foreground">{count}</span>
+                </label>
+              ))}
+              {Object.keys(topics).length === 0 && <p className="p-4 text-sm text-muted-foreground">No subcategories found for {examType}.</p>}
+            </div>
+            <div className="max-w-48"><Label htmlFor="custom-test-count">Number of questions</Label><Input id="custom-test-count" type="number" min={1} max={250} value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} /></div>
+            {selectedTopics.length > 0 && quantity > available && <p className="text-sm text-destructive">The requested number exceeds the {available} complete questions available.</p>}
+          </section>
+        ) : (
+          <section className="space-y-3">
+            <div><Label htmlFor="custom-test-subcategory">New isolated subcategory</Label><Input id="custom-test-subcategory" value={uploadTopic} onChange={(event) => setUploadTopic(event.target.value)} placeholder="e.g. Maternal Health Review" /></div>
+            <div><Label htmlFor="custom-test-file">Question file (.txt)</Label><Input id="custom-test-file" type="file" accept=".txt,text/plain" onChange={(event) => void readUpload(event.target.files?.[0])} /></div>
+            <p className="text-sm text-muted-foreground">{uploaded.length ? `${uploaded.length} valid questions loaded` : "Questions stay in this test until you add them to the main bank."}</p>
+          </section>
+        )}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div><Label htmlFor="custom-test-duration">Duration (minutes)</Label><Input id="custom-test-duration" type="number" min={10} max={180} value={duration} onChange={(event) => setDuration(Number(event.target.value))} /><p className="mt-1 text-xs text-muted-foreground">10 minutes to 3 hours</p></div>
+          <div><Label htmlFor="custom-test-expiry">Link expires</Label><Input id="custom-test-expiry" type="datetime-local" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} /></div>
+        </div>
+        <Button className="bg-hero" disabled={!canCreate || busy} onClick={() => void create()}><Plus className="h-4 w-4" />{busy ? "Creating…" : `Create and publish · ${selectedCount} questions`}</Button>
+      </Card>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3"><h2 className="text-xl font-semibold">Your Tests</h2><Button variant="outline" size="sm" onClick={() => void loadTests()}>Refresh</Button></div>
+        {tests.length === 0 ? <Card className="p-6 text-center text-sm text-muted-foreground">No custom tests created yet.</Card> : tests.map((test) => (
+          <Card key={test.id} className="p-5 space-y-4">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="min-w-0"><h3 className="font-semibold break-words">{test.title}</h3><p className="text-sm text-muted-foreground">{test.exam_type} · {test.question_count} questions · {test.duration_minutes} min · {test.source_mode === "upload" ? "Uploaded file" : "Question bank"}</p><p className="text-xs text-muted-foreground">Link expiry: {new Date(test.expires_at).toLocaleString()}</p></div>
+              <Badge variant={new Date(test.expires_at).getTime() > Date.now() && test.status === "published" ? "secondary" : "outline"}>{new Date(test.expires_at).getTime() > Date.now() ? test.status : "expired"}</Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-3 border-y py-3 sm:grid-cols-4">
+              <div><p className="text-xs text-muted-foreground">Participants</p><p className="text-xl font-semibold">{test.analytics?.participant_count ?? 0}</p></div>
+              <div><p className="text-xs text-muted-foreground">Passed</p><p className="text-xl font-semibold">{test.analytics?.pass_count ?? 0}</p></div>
+              <div><p className="text-xs text-muted-foreground">Failed</p><p className="text-xl font-semibold">{test.analytics?.fail_count ?? 0}</p></div>
+              <div><p className="text-xs text-muted-foreground">Pass rate / average</p><p className="text-xl font-semibold">{test.analytics?.pass_pct ?? 0}% <span className="text-sm font-normal text-muted-foreground">· {test.analytics?.average_score ?? 0}%</span></p></div>
+            </div>
+            {test.attempts.length > 0 && <div><h4 className="mb-2 text-sm font-medium">Results leaderboard</h4><div className="divide-y border-y">{test.attempts.map((attempt, index) => <div key={attempt.id} className="flex items-center justify-between gap-3 py-2 text-sm"><span className="min-w-0 truncate">{index + 1}. {attempt.email}</span><span className="shrink-0 font-medium">{attempt.score_pct ?? 0}%</span></div>)}</div></div>}
+            <div className="flex flex-wrap items-end gap-2">
+              {shareLinks[test.id] && <Button variant="outline" onClick={() => void copyLink(shareLinks[test.id])}><Copy className="h-4 w-4" />Copy share link</Button>}
+              {(new Date(test.expires_at).getTime() <= Date.now() || test.status !== "published") && <Button variant="outline" disabled={busy} onClick={() => void issueNewLink(test)}><Link2 className="h-4 w-4" />Republish with expiry above</Button>}
+              <div className="flex min-w-56 flex-1 items-end gap-2"><div className="min-w-0 flex-1"><Label htmlFor={`import-topic-${test.id}`} className="text-xs">Question-bank subcategory</Label><Input id={`import-topic-${test.id}`} value={importTopics[test.id] ?? ""} onChange={(event) => setImportTopics((current) => ({ ...current, [test.id]: event.target.value }))} placeholder="e.g. Maternal Health" /></div><Button disabled={busy} onClick={() => void importToBank(test)}>Add to Question Bank</Button></div>
+            </div>
+          </Card>
+        ))}
+      </section>
+    </div>
+  );
+}
+
 function QuestionsTab() {
   const [examType, setExamType] = useState<"RN" | "RM">("RN");
   const [existingSubs, setExistingSubs] = useState<string[]>([]);
