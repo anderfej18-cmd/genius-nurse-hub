@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database, Json } from "@/integrations/supabase/types";
-import { createHash } from "crypto";
 
 type ExamType = Database["public"]["Enums"]["exam_type"];
 type SnapshotQuestion = {
@@ -21,7 +20,10 @@ const assertAdmin = async (context: { supabase: any; userId: string }) => {
   if (error || !data) throw new Error("You are not authorized to manage custom tests.");
 };
 
-const digest = (value: string) => createHash("sha256").update(value).digest("hex");
+const digest = async (value: string) => {
+  const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+};
 
 export const createCustomTest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -114,7 +116,7 @@ export const startSharedTest = createServerFn({ method: "POST" })
     if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error("Enter a valid email address.");
     if (data.accessKey.length < 32) throw new Error("Invalid attempt key.");
     const { data: attemptRows, error } = await supabaseAdmin.rpc("start_custom_test_attempt", {
-      _token_hash: data.tokenHash, _email: email, _access_hash: digest(data.accessKey),
+      _token_hash: data.tokenHash, _email: email, _access_hash: await digest(data.accessKey),
     });
     if (error) throw new Error(error.message);
     const attempt = attemptRows?.[0];
@@ -127,13 +129,13 @@ export const submitSharedTest = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: scores, error } = await supabaseAdmin.rpc("submit_custom_test_attempt", {
-      _attempt_id: data.attemptId, _access_hash: digest(data.accessKey), _answers: data.answers as unknown as Json,
+      _attempt_id: data.attemptId, _access_hash: await digest(data.accessKey), _answers: data.answers as unknown as Json,
     });
     if (error) throw new Error(error.message);
     const score = scores?.[0];
     if (!score) throw new Error("Could not submit this test.");
     const { data: results, error: resultError } = await supabaseAdmin.rpc("get_custom_test_attempt_results", {
-      _attempt_id: data.attemptId, _access_hash: digest(data.accessKey),
+      _attempt_id: data.attemptId, _access_hash: await digest(data.accessKey),
     });
     if (resultError) throw new Error(resultError.message);
     return { score: score.score_pct, correct: score.correct_count, total: score.total_questions, results: results ?? [] };
@@ -145,7 +147,7 @@ export const claimSharedTestAttempt = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: updated, error } = await supabaseAdmin.from("custom_test_attempts")
-      .update({ user_id: context.userId }).eq("id", data.attemptId).eq("access_hash", digest(data.accessKey)).is("user_id", null).select("id");
+      .update({ user_id: context.userId }).eq("id", data.attemptId).eq("access_hash", await digest(data.accessKey)).is("user_id", null).select("id");
     if (error) throw new Error(error.message);
     return { claimed: (updated?.length ?? 0) > 0 };
   });
