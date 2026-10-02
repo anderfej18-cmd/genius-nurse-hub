@@ -82,20 +82,26 @@ function Payments() {
         callback: (res) => {
           // Paystack runs this outside React's async flow.
           void (async () => {
-            const { data, error } = await supabase.rpc("activate_subscription", {
-              _tier: plan.name as "erudite" | "scholar",
-              _reference: res.reference,
-              _amount: Number(plan.price_ngn),
-            });
-            if (error) {
-              toast.error(`Payment received but activation failed: ${error.message}`);
-            } else {
-              const until = data ? new Date(data as unknown as string).toLocaleDateString() : "";
+            try {
+              const { data: sessionData } = await supabase.auth.getSession();
+              const accessToken = sessionData.session?.access_token;
+              if (!accessToken) throw new Error("Payment received. Sign in again to activate your plan.");
+              const response = await fetch("/api/public/paystack-verify", {
+                method: "POST",
+                headers: { "content-type": "application/json", authorization: `Bearer ${accessToken}` },
+                body: JSON.stringify({ reference: res.reference }),
+              });
+              const result = await response.json() as { ok?: boolean; tier?: string; expiresAt?: string; error?: string };
+              if (!response.ok || !result.ok) throw new Error(result.error ?? "Payment received but plan activation failed.");
+              const until = result.expiresAt ? new Date(result.expiresAt).toLocaleDateString() : "";
               toast.success(`You're now ${plan.name}! Access until ${until}`);
               await refresh();
               await loadHistory(user.id);
+            } catch (error) {
+              toast.error(error instanceof Error ? `Payment received but activation failed: ${error.message}` : "Payment received but activation failed. Please contact support.");
+            } finally {
+              setBusy(null);
             }
-            setBusy(null);
           })();
         },
         onClose: () => { setBusy(null); },

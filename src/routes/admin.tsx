@@ -16,6 +16,7 @@ import { LeaderboardTable } from "@/components/LeaderboardTable";
 import { fetchTopicCounts } from "@/lib/topics";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { questionIssues, type QuestionFields } from "@/lib/questions";
+import { isCompleteQuestion } from "@/lib/questions";
 import { createCustomTest, importCustomTestQuestions, listCustomTests, republishCustomTest } from "@/lib/custom-tests.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { Checkbox } from "@/components/ui/checkbox";

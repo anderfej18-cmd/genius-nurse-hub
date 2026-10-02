@@ -637,6 +637,15 @@ export type Database = {
         }
         Returns: string
       }
+      activate_verified_subscription: {
+        Args: {
+          _amount: number
+          _reference: string
+          _tier: Database["public"]["Enums"]["user_tier"]
+          _user_id: string
+        }
+        Returns: string
+      }
       add_custom_test_to_question_bank: {
         Args: {
           _custom_test_id: string
