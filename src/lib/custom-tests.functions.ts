@@ -96,15 +96,21 @@ export const listCustomTests = createServerFn({ method: "GET" })
 export const getSharedTest = createServerFn({ method: "POST" })
   .inputValidator((data: { tokenHash: string }) => data)
   .handler(async ({ data }) => {
+    if (!/^[a-f0-9]{64}$/i.test(data.tokenHash)) return { expired: true as const, test: null, questions: [] };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: rows, error } = await supabaseAdmin.rpc("get_custom_test_by_token", { _token_hash: data.tokenHash });
+    const { data: test, error } = await supabaseAdmin.from("custom_tests")
+      .select("id, title, description, exam_type, duration_minutes, expires_at")
+      .eq("token_hash", data.tokenHash).eq("status", "published").gt("expires_at", new Date().toISOString()).maybeSingle();
     if (error) throw new Error(error.message);
-    if (!rows?.length) return { expired: true as const, test: null, questions: [] };
-    const first = rows[0];
+    if (!test) return { expired: true as const, test: null, questions: [] };
+    const { data: questions, error: questionsError } = await supabaseAdmin.from("custom_test_questions")
+      .select("id, position, question_text, option_a, option_b, option_c, option_d")
+      .eq("custom_test_id", test.id).order("position");
+    if (questionsError) throw new Error(questionsError.message);
     return {
       expired: false as const,
-      test: { id: first.test_id, title: first.title, description: first.description, exam_type: first.exam_type, duration_minutes: first.duration_minutes, expires_at: first.expires_at },
-      questions: rows.map((row) => ({ id: row.question_id, position: row.question_position, question_text: row.question_text, option_a: row.option_a, option_b: row.option_b, option_c: row.option_c, option_d: row.option_d })),
+      test,
+      questions: questions ?? [],
     };
   });
 
@@ -114,31 +120,61 @@ export const startSharedTest = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const email = data.email.trim().toLowerCase();
     if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error("Enter a valid email address.");
-    if (data.accessKey.length < 32) throw new Error("Invalid attempt key.");
-    const { data: attemptRows, error } = await supabaseAdmin.rpc("start_custom_test_attempt", {
-      _token_hash: data.tokenHash, _email: email, _access_hash: await digest(data.accessKey),
-    });
+    if (!/^[a-f0-9]{64}$/i.test(data.tokenHash) || data.accessKey.length < 32) throw new Error("Invalid test link or attempt key.");
+    const { data: test, error: testError } = await supabaseAdmin.from("custom_tests")
+      .select("id, duration_minutes, expires_at").eq("token_hash", data.tokenHash)
+      .eq("status", "published").gt("expires_at", new Date().toISOString()).maybeSingle();
+    if (testError || !test) throw new Error("This test link has expired or does not exist.");
+    const { count, error: countError } = await supabaseAdmin.from("custom_test_questions")
+      .select("id", { count: "exact", head: true }).eq("custom_test_id", test.id);
+    if (countError || !count) throw new Error("This test has no questions.");
+    const { data: attempt, error } = await supabaseAdmin.from("custom_test_attempts").insert({
+      custom_test_id: test.id, email, access_hash: await digest(data.accessKey), total_questions: count,
+    }).select("id, started_at").single();
     if (error) throw new Error(error.message);
-    const attempt = attemptRows?.[0];
-    if (!attempt) throw new Error("Could not start this test.");
-    return { attemptId: attempt.attempt_id, durationMinutes: attempt.duration_minutes, totalQuestions: attempt.total_questions, accessKey: data.accessKey };
+    return { attemptId: attempt.id, durationMinutes: test.duration_minutes, totalQuestions: count, startedAt: attempt.started_at, accessKey: data.accessKey };
   });
 
 export const submitSharedTest = createServerFn({ method: "POST" })
   .inputValidator((data: { attemptId: string; accessKey: string; answers: Array<{ question_id: string; user_answer: string | null }> }) => data)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: scores, error } = await supabaseAdmin.rpc("submit_custom_test_attempt", {
-      _attempt_id: data.attemptId, _access_hash: await digest(data.accessKey), _answers: data.answers as unknown as Json,
+    if (data.answers.length > 250) throw new Error("Too many answers submitted.");
+    const accessHash = await digest(data.accessKey);
+    const { data: attempt, error: attemptError } = await supabaseAdmin.from("custom_test_attempts")
+      .select("id, custom_test_id, started_at, total_questions, status")
+      .eq("id", data.attemptId).eq("access_hash", accessHash).maybeSingle();
+    if (attemptError || !attempt) throw new Error("Attempt not found.");
+    if (attempt.status === "completed") throw new Error("This test has already been submitted.");
+    const { data: test } = await supabaseAdmin.from("custom_tests").select("duration_minutes")
+      .eq("id", attempt.custom_test_id).maybeSingle();
+    const deadline = new Date(attempt.started_at).getTime() + Number(test?.duration_minutes ?? 0) * 60_000;
+    if (Date.now() < deadline && data.answers.filter((answer) => answer.user_answer !== null).length < Math.ceil(attempt.total_questions * 0.8)) {
+      throw new Error(`Answer at least ${Math.ceil(attempt.total_questions * 0.8)} questions before submitting.`);
+    }
+    const { data: questions, error: questionsError } = await supabaseAdmin.from("custom_test_questions")
+      .select("id, position, question_text, option_a, option_b, option_c, option_d, correct_answer, rationale")
+      .eq("custom_test_id", attempt.custom_test_id).order("position");
+    if (questionsError || !questions) throw new Error("Could not load test answers.");
+    const answerById = new Map(data.answers.map((answer) => [answer.question_id, answer.user_answer?.toUpperCase() ?? null]));
+    const results = questions.map((question) => {
+      const answer = answerById.get(question.id) ?? null;
+      return { question_id: question.id, question_position: question.position, question_text: question.question_text,
+        option_a: question.option_a, option_b: question.option_b, option_c: question.option_c, option_d: question.option_d,
+        correct_answer: question.correct_answer, rationale: question.rationale, user_answer: answer,
+        is_correct: answer === question.correct_answer };
     });
-    if (error) throw new Error(error.message);
-    const score = scores?.[0];
-    if (!score) throw new Error("Could not submit this test.");
-    const { data: results, error: resultError } = await supabaseAdmin.rpc("get_custom_test_attempt_results", {
-      _attempt_id: data.attemptId, _access_hash: await digest(data.accessKey),
-    });
-    if (resultError) throw new Error(resultError.message);
-    return { score: score.score_pct, correct: score.correct_count, total: score.total_questions, results: results ?? [] };
+    const correct = results.filter((result) => result.is_correct).length;
+    const score = Number(((correct / attempt.total_questions) * 100).toFixed(2));
+    const answerRows = results.map((result) => ({ attempt_id: attempt.id, custom_test_question_id: result.question_id,
+      user_answer: result.user_answer, is_correct: result.is_correct, position: result.question_position }));
+    const { error: answerWriteError } = await supabaseAdmin.from("custom_test_attempt_answers").upsert(answerRows, { onConflict: "attempt_id,custom_test_question_id" });
+    if (answerWriteError) throw new Error(answerWriteError.message);
+    const { error: completionError } = await supabaseAdmin.from("custom_test_attempts").update({
+      completed_at: new Date().toISOString(), correct_count: correct, score_pct: score, status: "completed",
+    }).eq("id", attempt.id).eq("access_hash", accessHash).eq("status", "in_progress");
+    if (completionError) throw new Error(completionError.message);
+    return { score, correct, total: attempt.total_questions, results };
   });
 
 export const claimSharedTestAttempt = createServerFn({ method: "POST" })
