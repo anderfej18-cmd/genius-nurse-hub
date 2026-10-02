@@ -18,6 +18,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as ExamExamIdRouteImport } from './routes/exam.$examId'
 import { Route as ExamStartRouteImport } from './routes/exam.start'
+import { Route as ApiPublicPaystackVerifyRouteImport } from './routes/api/public/paystack-verify'
 import { Route as ExamExamIdIndexRouteImport } from './routes/exam.$examId.index'
 import { Route as ExamExamIdResultsRouteImport } from './routes/exam.$examId.results'
 
@@ -66,6 +67,11 @@ const ExamStartRoute = ExamStartRouteImport.update({
   path: '/exam/start',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPaystackVerifyRoute = ApiPublicPaystackVerifyRouteImport.update({
+  id: '/api/public/paystack-verify',
+  path: '/api/public/paystack-verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ExamExamIdIndexRoute = ExamExamIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/payments': typeof PaymentsRoute
   '/exam/$examId': typeof ExamExamIdRouteWithChildren
   '/exam/start': typeof ExamStartRoute
+  '/api/public/paystack-verify': typeof ApiPublicPaystackVerifyRoute
   '/exam/$examId/results': typeof ExamExamIdResultsRoute
   '/exam/$examId/': typeof ExamExamIdIndexRoute
 }
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/payments': typeof PaymentsRoute
   '/exam/start': typeof ExamStartRoute
+  '/api/public/paystack-verify': typeof ApiPublicPaystackVerifyRoute
   '/exam/$examId/results': typeof ExamExamIdResultsRoute
   '/exam/$examId': typeof ExamExamIdIndexRoute
 }
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/payments': typeof PaymentsRoute
   '/exam/$examId': typeof ExamExamIdRouteWithChildren
   '/exam/start': typeof ExamStartRoute
+  '/api/public/paystack-verify': typeof ApiPublicPaystackVerifyRoute
   '/exam/$examId/results': typeof ExamExamIdResultsRoute
   '/exam/$examId/': typeof ExamExamIdIndexRoute
 }
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/exam/$examId'
     | '/exam/start'
+    | '/api/public/paystack-verify'
     | '/exam/$examId/results'
     | '/exam/$examId/'
   fileRoutesByTo: FileRoutesByTo
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/payments'
     | '/exam/start'
+    | '/api/public/paystack-verify'
     | '/exam/$examId/results'
     | '/exam/$examId'
   id:
@@ -153,6 +164,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/exam/$examId'
     | '/exam/start'
+    | '/api/public/paystack-verify'
     | '/exam/$examId/results'
     | '/exam/$examId/'
   fileRoutesById: FileRoutesById
@@ -167,6 +179,7 @@ export interface RootRouteChildren {
   PaymentsRoute: typeof PaymentsRoute
   ExamExamIdRoute: typeof ExamExamIdRouteWithChildren
   ExamStartRoute: typeof ExamStartRoute
+  ApiPublicPaystackVerifyRoute: typeof ApiPublicPaystackVerifyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -234,6 +247,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExamStartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/paystack-verify': {
+      id: '/api/public/paystack-verify'
+      path: '/api/public/paystack-verify'
+      fullPath: '/api/public/paystack-verify'
+      preLoaderRoute: typeof ApiPublicPaystackVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/exam/$examId/': {
       id: '/exam/$examId/'
       path: '/'
@@ -275,6 +295,7 @@ const rootRouteChildren: RootRouteChildren = {
   PaymentsRoute: PaymentsRoute,
   ExamExamIdRoute: ExamExamIdRouteWithChildren,
   ExamStartRoute: ExamStartRoute,
+  ApiPublicPaystackVerifyRoute: ApiPublicPaystackVerifyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
