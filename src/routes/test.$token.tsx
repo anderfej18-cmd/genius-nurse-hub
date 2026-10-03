@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { claimSharedTestAttempt, getSharedTest, startSharedTest, submitSharedTest } from "@/lib/custom-tests.functions";
@@ -35,6 +34,7 @@ export const Route = createFileRoute("/test/$token")({
 type SharedTestData = Awaited<ReturnType<ReturnType<typeof getSharedTest>>>;
 type Question = SharedTestData["questions"][number];
 type TestResult = Awaited<ReturnType<ReturnType<typeof submitSharedTest>>>;
+const SHARED_ATTEMPT_KEY = "ng.sharedTestAttempt";
 
 function SharedTestPage() {
   const { token } = Route.useParams();
@@ -160,8 +160,8 @@ function SharedTestPage() {
   if (result) {
     return <><AppHeader /><main className="container mx-auto max-w-4xl space-y-6 px-4 py-8">
       <Card className="p-6"><p className="text-sm uppercase text-muted-foreground">{testData.test.title}</p><h1 className="mt-2 text-3xl font-bold">{result.score >= 50 ? "Test passed" : "Keep practising"}</h1><p className="mt-2 text-xl">{result.score}% <span className="text-base text-muted-foreground">· {result.correct} of {result.total} correct</span></p><Progress value={result.score} className="mt-4" /></Card>
-      {user && !profile?.onboarded && <Card className="p-5"><h2 className="font-semibold">Complete your profile</h2><p className="mt-1 text-sm text-muted-foreground">Save this result to your NurseGenius account and unlock your study tools.</p><Button className="mt-3" onClick={() => void navigate({ to: "/onboarding", search: { sharedAttempt: attemptId ?? "", accessKey: accessKey ?? "", email } })}>Complete Profile</Button></Card>}
-      {!user && <Card className="p-5"><h2 className="font-semibold">Save your result and complete your profile</h2><p className="mt-1 text-sm text-muted-foreground">Create or sign in to an account using {email}; your completed test can then be linked to it.</p><Button className="mt-3" asChild><Link to="/auth" search={{ sharedAttempt: attemptId ?? "", accessKey: accessKey ?? "", email }}>Complete Profile</Link></Button></Card>}
+      {user && !profile?.onboarded && <Card className="p-5"><h2 className="font-semibold">Complete your profile</h2><p className="mt-1 text-sm text-muted-foreground">Save this result to your NurseGenius account and unlock your study tools.</p><Button className="mt-3" onClick={() => { if (attemptId && accessKey) sessionStorage.setItem(SHARED_ATTEMPT_KEY, JSON.stringify({ attemptId, accessKey, email })); void navigate({ to: "/onboarding" }); }}>Complete Profile</Button></Card>}
+      {!user && <Card className="p-5"><h2 className="font-semibold">Save your result and complete your profile</h2><p className="mt-1 text-sm text-muted-foreground">Create or sign in to an account using {email}; your completed test can then be linked to it.</p><Button className="mt-3" asChild><Link to="/auth" onClick={() => { if (attemptId && accessKey) sessionStorage.setItem(SHARED_ATTEMPT_KEY, JSON.stringify({ attemptId, accessKey, email })); }}>Complete Profile</Link></Button></Card>}
       <section className="space-y-3"><h2 className="text-xl font-semibold">Answer review</h2>{result.results.map((entry, index) => <Card key={entry.question_id} className="p-5"><div className="flex items-start gap-3"><span className="text-sm font-semibold text-muted-foreground">{index + 1}.</span><div className="min-w-0 flex-1"><p className="font-medium">{entry.question_text}</p><div className="mt-3 space-y-1 text-sm">{[["A", entry.option_a], ["B", entry.option_b], ["C", entry.option_c], ["D", entry.option_d]].map(([letter, text]) => <p key={letter} className={letter === entry.correct_answer ? "font-medium text-success" : letter === entry.user_answer ? "text-destructive" : "text-muted-foreground"}>{letter}. {text}{letter === entry.correct_answer ? " · Correct answer" : letter === entry.user_answer ? " · Your answer" : ""}</p>)}</div>{entry.rationale && <p className="mt-3 border-t pt-3 text-sm text-muted-foreground"><strong>Explanation:</strong> {entry.rationale}</p>}{user && profile?.onboarded && <Button className="mt-3" size="sm" variant="outline" disabled={aiLoadingId === entry.question_id} onClick={() => void askAi(entry)}><Sparkles className="h-4 w-4"/>{aiLoadingId === entry.question_id ? "Thinking…" : "Ask AI"}</Button>}{aiAnswers[entry.question_id] && <p className="mt-3 whitespace-pre-wrap border-t pt-3 text-sm">{aiAnswers[entry.question_id]}</p>}</div><CheckCircle2 className={`h-5 w-5 shrink-0 ${entry.is_correct ? "text-success" : "text-muted-foreground"}`} /></div></Card>)}</section>
     </main></>;
   }
