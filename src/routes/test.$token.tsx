@@ -9,11 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { claimSharedTestAttempt, getSharedTest, startSharedTest, submitSharedTest } from "@/lib/custom-tests.functions";
-import { ArrowLeft, ArrowRight, CheckCircle2, Clock3 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Clock3, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/test/$token")({
@@ -35,6 +34,7 @@ export const Route = createFileRoute("/test/$token")({
 type SharedTestData = Awaited<ReturnType<ReturnType<typeof getSharedTest>>>;
 type Question = SharedTestData["questions"][number];
 type TestResult = Awaited<ReturnType<ReturnType<typeof submitSharedTest>>>;
+const SHARED_ATTEMPT_KEY = "ng.sharedTestAttempt";
 
 function SharedTestPage() {
   const { token } = Route.useParams();
@@ -54,6 +54,8 @@ function SharedTestPage() {
   const [position, setPosition] = useState(0);
   const [remaining, setRemaining] = useState(0);
   const [result, setResult] = useState<TestResult | null>(null);
+  const [aiLoadingId, setAiLoadingId] = useState<string | null>(null);
+  const [aiAnswers, setAiAnswers] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -113,6 +115,24 @@ function SharedTestPage() {
     finally { setBusy(false); }
   };
 
+  const askAi = async (item: TestResult["results"][number]) => {
+    setAiLoadingId(item.question_id);
+    try {
+      const { data, error } = await supabase.functions.invoke("ask-ai", {
+        body: {
+          question: item.question_text,
+          options: { A: item.option_a, B: item.option_b, C: item.option_c, D: item.option_d },
+          correct: item.correct_answer,
+          topic: testData?.test?.exam_type ?? "Nursing",
+        },
+      });
+      if (error) throw error;
+      if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+      setAiAnswers((current) => ({ ...current, [item.question_id]: (data as { explanation?: string }).explanation ?? "No response." }));
+    } catch (error) { toast.error(error instanceof Error ? error.message : "AI request failed."); }
+    finally { setAiLoadingId(null); }
+  };
+
   useEffect(() => {
     if (attemptId && remaining === 0 && !result && duration > 0) void submit(true);
     // Submit once when the countdown ends.
@@ -140,10 +160,9 @@ function SharedTestPage() {
   if (result) {
     return <><AppHeader /><main className="container mx-auto max-w-4xl space-y-6 px-4 py-8">
       <Card className="p-6"><p className="text-sm uppercase text-muted-foreground">{testData.test.title}</p><h1 className="mt-2 text-3xl font-bold">{result.score >= 50 ? "Test passed" : "Keep practising"}</h1><p className="mt-2 text-xl">{result.score}% <span className="text-base text-muted-foreground">· {result.correct} of {result.total} correct</span></p><Progress value={result.score} className="mt-4" /></Card>
-      {user && !profile?.onboarded && <Card className="p-5"><h2 className="font-semibold">Complete your profile</h2><p className="mt-1 text-sm text-muted-foreground">Save this result to your NurseGenius account and unlock your study tools.</p><Button className="mt-3" onClick={() => void navigate({ to: "/onboarding", search: { sharedAttempt: attemptId ?? "", accessKey: accessKey ?? "", email } })}>Complete Profile</Button></Card>}
-      {!user && <Card className="p-5"><h2 className="font-semibold">Save your result and complete your profile</h2><p className="mt-1 text-sm text-muted-foreground">Create or sign in to an account using {email}; your completed test can then be linked to it.</p><Button className="mt-3" asChild><Link to="/auth" search={{ sharedAttempt: attemptId ?? "", accessKey: accessKey ?? "", email }}>Complete Profile</Link></Button></Card>}
-      {user && profile?.onboarded && <Card className="p-5"><h2 className="font-semibold">Ask AI about a question</h2><p className="mt-1 text-sm text-muted-foreground">Choose any explanation below to discuss it with your NurseGenius AI mentor.</p></Card>}
-      <section className="space-y-3"><h2 className="text-xl font-semibold">Answer review</h2>{result.results.map((entry, index) => <Card key={entry.question_id} className="p-5"><div className="flex items-start gap-3"><span className="text-sm font-semibold text-muted-foreground">{index + 1}.</span><div className="min-w-0 flex-1"><p className="font-medium">{entry.question_text}</p><div className="mt-3 space-y-1 text-sm">{[["A", entry.option_a], ["B", entry.option_b], ["C", entry.option_c], ["D", entry.option_d]].map(([letter, text]) => <p key={letter} className={letter === entry.correct_answer ? "font-medium text-success" : letter === entry.user_answer ? "text-destructive" : "text-muted-foreground"}>{letter}. {text}{letter === entry.correct_answer ? " · Correct answer" : letter === entry.user_answer ? " · Your answer" : ""}</p>)}</div>{entry.rationale && <p className="mt-3 border-t pt-3 text-sm text-muted-foreground"><strong>Explanation:</strong> {entry.rationale}</p>}</div><CheckCircle2 className={`h-5 w-5 shrink-0 ${entry.is_correct ? "text-success" : "text-muted-foreground"}`} /></div></Card>)}</section>
+      {user && !profile?.onboarded && <Card className="p-5"><h2 className="font-semibold">Complete your profile</h2><p className="mt-1 text-sm text-muted-foreground">Save this result to your NurseGenius account and unlock your study tools.</p><Button className="mt-3" onClick={() => { if (attemptId && accessKey) sessionStorage.setItem(SHARED_ATTEMPT_KEY, JSON.stringify({ attemptId, accessKey, email })); void navigate({ to: "/onboarding" }); }}>Complete Profile</Button></Card>}
+      {!user && <Card className="p-5"><h2 className="font-semibold">Save your result and complete your profile</h2><p className="mt-1 text-sm text-muted-foreground">Create or sign in to an account using {email}; your completed test can then be linked to it.</p><Button className="mt-3" asChild><Link to="/auth" onClick={() => { if (attemptId && accessKey) sessionStorage.setItem(SHARED_ATTEMPT_KEY, JSON.stringify({ attemptId, accessKey, email })); }}>Complete Profile</Link></Button></Card>}
+      <section className="space-y-3"><h2 className="text-xl font-semibold">Answer review</h2>{result.results.map((entry, index) => <Card key={entry.question_id} className="p-5"><div className="flex items-start gap-3"><span className="text-sm font-semibold text-muted-foreground">{index + 1}.</span><div className="min-w-0 flex-1"><p className="font-medium">{entry.question_text}</p><div className="mt-3 space-y-1 text-sm">{[["A", entry.option_a], ["B", entry.option_b], ["C", entry.option_c], ["D", entry.option_d]].map(([letter, text]) => <p key={letter} className={letter === entry.correct_answer ? "font-medium text-success" : letter === entry.user_answer ? "text-destructive" : "text-muted-foreground"}>{letter}. {text}{letter === entry.correct_answer ? " · Correct answer" : letter === entry.user_answer ? " · Your answer" : ""}</p>)}</div>{entry.rationale && <p className="mt-3 border-t pt-3 text-sm text-muted-foreground"><strong>Explanation:</strong> {entry.rationale}</p>}{user && profile?.onboarded && <Button className="mt-3" size="sm" variant="outline" disabled={aiLoadingId === entry.question_id} onClick={() => void askAi(entry)}><Sparkles className="h-4 w-4"/>{aiLoadingId === entry.question_id ? "Thinking…" : "Ask AI"}</Button>}{aiAnswers[entry.question_id] && <p className="mt-3 whitespace-pre-wrap border-t pt-3 text-sm">{aiAnswers[entry.question_id]}</p>}</div><CheckCircle2 className={`h-5 w-5 shrink-0 ${entry.is_correct ? "text-success" : "text-muted-foreground"}`} /></div></Card>)}</section>
     </main></>;
   }
 
@@ -154,6 +173,5 @@ function SharedTestPage() {
     <div><Progress value={(answeredCount / questions.length) * 100}/><p className="mt-1 text-xs text-muted-foreground">{answeredCount} answered · {needed} required to submit before time runs out</p></div>
     {question && <Card className="p-5 sm:p-7"><div className="flex items-start gap-3"><span className="font-semibold text-muted-foreground">{position + 1}.</span><div className="min-w-0 flex-1"><p className="text-lg font-medium leading-relaxed">{question.question_text}</p><RadioGroup className="mt-5 space-y-3" value={answers[question.id] ?? ""} onValueChange={(value) => setAnswers((current) => ({ ...current, [question.id]: value }))}>{options.map(([letter, text]) => <Label key={letter} htmlFor={`answer-${letter}`} className="flex cursor-pointer items-start gap-3 border p-3 font-normal"><RadioGroupItem id={`answer-${letter}`} value={letter}/><span><strong>{letter}.</strong> {text}</span></Label>)}</RadioGroup></div></div></Card>}
     <div className="flex flex-wrap items-center justify-between gap-2"><Button variant="outline" disabled={position === 0} onClick={() => setPosition((value) => Math.max(0, value - 1))}><ArrowLeft className="h-4 w-4"/>Previous</Button><div className="flex gap-2">{position < questions.length - 1 && <Button onClick={() => setPosition((value) => Math.min(questions.length - 1, value + 1))}>Next<ArrowRight className="h-4 w-4"/></Button>}<Button variant="destructive" disabled={busy} onClick={() => void submit()}>{busy ? "Submitting…" : "Submit test"}</Button></div></div>
-    {user && profile?.onboarded && <Card className="p-4"><Label htmlFor="ask-ai-question">Ask AI about this question</Label><Textarea id="ask-ai-question" className="mt-2" rows={2} placeholder="AI help is available after the test is submitted." disabled /></Card>}
   </main></>;
 }
