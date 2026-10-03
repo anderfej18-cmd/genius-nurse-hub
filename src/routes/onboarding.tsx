@@ -9,12 +9,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { claimSharedTestAttempt } from "@/lib/custom-tests.functions";
 
 export const Route = createFileRoute("/onboarding")({ component: Onboarding });
 
 function Onboarding() {
   const { user, profile, loading, refresh } = useAuth();
   const navigate = useNavigate();
+  const claimAttempt = useServerFn(claimSharedTestAttempt);
 
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
@@ -26,7 +29,19 @@ function Onboarding() {
   useEffect(() => {
     if (!loading) {
       if (!user) navigate({ to: "/auth" });
-      else if (profile?.onboarded) navigate({ to: "/dashboard" });
+      else if (profile?.onboarded) {
+        void (async () => {
+          const pending = sessionStorage.getItem("ng.sharedTestAttempt");
+          if (pending) {
+            try {
+              const attempt = JSON.parse(pending) as { attemptId?: string; accessKey?: string };
+              if (attempt.attemptId && attempt.accessKey) await claimAttempt({ data: { attemptId: attempt.attemptId, accessKey: attempt.accessKey } });
+              sessionStorage.removeItem("ng.sharedTestAttempt");
+            } catch { /* Keep the profile flow usable even if the result cannot be linked. */ }
+          }
+          navigate({ to: "/dashboard" });
+        })();
+      }
     }
   }, [loading, user, profile, navigate]);
 
@@ -53,6 +68,14 @@ function Onboarding() {
       return;
     }
     await refresh();
+    const pending = sessionStorage.getItem("ng.sharedTestAttempt");
+    if (pending) {
+      try {
+        const attempt = JSON.parse(pending) as { attemptId?: string; accessKey?: string };
+        if (attempt.attemptId && attempt.accessKey) await claimAttempt({ data: { attemptId: attempt.attemptId, accessKey: attempt.accessKey } });
+        sessionStorage.removeItem("ng.sharedTestAttempt");
+      } catch { toast.error("Profile saved. This test result could not be linked to your account."); }
+    }
     toast.success("Profile complete!");
     navigate({ to: "/dashboard" });
   };
