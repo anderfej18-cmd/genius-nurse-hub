@@ -18,6 +18,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as ExamExamIdRouteImport } from './routes/exam.$examId'
 import { Route as ExamStartRouteImport } from './routes/exam.start'
+import { Route as TestTokenRouteImport } from './routes/test.$token'
 import { Route as ApiPublicPaystackVerifyRouteImport } from './routes/api/public/paystack-verify'
 import { Route as ExamExamIdIndexRouteImport } from './routes/exam.$examId.index'
 import { Route as ExamExamIdResultsRouteImport } from './routes/exam.$examId.results'
@@ -67,6 +68,11 @@ const ExamStartRoute = ExamStartRouteImport.update({
   path: '/exam/start',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TestTokenRoute = TestTokenRouteImport.update({
+  id: '/test/$token',
+  path: '/test/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPaystackVerifyRoute = ApiPublicPaystackVerifyRouteImport.update({
   id: '/api/public/paystack-verify',
   path: '/api/public/paystack-verify',
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/payments': typeof PaymentsRoute
   '/exam/$examId': typeof ExamExamIdRouteWithChildren
   '/exam/start': typeof ExamStartRoute
+  '/test/$token': typeof TestTokenRoute
   '/api/public/paystack-verify': typeof ApiPublicPaystackVerifyRoute
   '/exam/$examId/results': typeof ExamExamIdResultsRoute
   '/exam/$examId/': typeof ExamExamIdIndexRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/payments': typeof PaymentsRoute
   '/exam/start': typeof ExamStartRoute
+  '/test/$token': typeof TestTokenRoute
   '/api/public/paystack-verify': typeof ApiPublicPaystackVerifyRoute
   '/exam/$examId/results': typeof ExamExamIdResultsRoute
   '/exam/$examId': typeof ExamExamIdIndexRoute
@@ -121,6 +129,7 @@ export interface FileRoutesById {
   '/payments': typeof PaymentsRoute
   '/exam/$examId': typeof ExamExamIdRouteWithChildren
   '/exam/start': typeof ExamStartRoute
+  '/test/$token': typeof TestTokenRoute
   '/api/public/paystack-verify': typeof ApiPublicPaystackVerifyRoute
   '/exam/$examId/results': typeof ExamExamIdResultsRoute
   '/exam/$examId/': typeof ExamExamIdIndexRoute
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/exam/$examId'
     | '/exam/start'
+    | '/test/$token'
     | '/api/public/paystack-verify'
     | '/exam/$examId/results'
     | '/exam/$examId/'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/payments'
     | '/exam/start'
+    | '/test/$token'
     | '/api/public/paystack-verify'
     | '/exam/$examId/results'
     | '/exam/$examId'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/exam/$examId'
     | '/exam/start'
+    | '/test/$token'
     | '/api/public/paystack-verify'
     | '/exam/$examId/results'
     | '/exam/$examId/'
@@ -179,6 +191,7 @@ export interface RootRouteChildren {
   PaymentsRoute: typeof PaymentsRoute
   ExamExamIdRoute: typeof ExamExamIdRouteWithChildren
   ExamStartRoute: typeof ExamStartRoute
+  TestTokenRoute: typeof TestTokenRoute
   ApiPublicPaystackVerifyRoute: typeof ApiPublicPaystackVerifyRoute
 }
 
@@ -247,6 +260,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExamStartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/test/$token': {
+      id: '/test/$token'
+      path: '/test/$token'
+      fullPath: '/test/$token'
+      preLoaderRoute: typeof TestTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/paystack-verify': {
       id: '/api/public/paystack-verify'
       path: '/api/public/paystack-verify'
@@ -295,6 +315,7 @@ const rootRouteChildren: RootRouteChildren = {
   PaymentsRoute: PaymentsRoute,
   ExamExamIdRoute: ExamExamIdRouteWithChildren,
   ExamStartRoute: ExamStartRoute,
+  TestTokenRoute: TestTokenRoute,
   ApiPublicPaystackVerifyRoute: ApiPublicPaystackVerifyRoute,
 }
 export const routeTree = rootRouteImport
