@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { Database, Json } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
 
 type ExamType = Database["public"]["Enums"]["exam_type"];
 type SnapshotQuestion = {
@@ -182,6 +182,11 @@ export const claimSharedTestAttempt = createServerFn({ method: "POST" })
   .inputValidator((data: { attemptId: string; accessKey: string }) => data)
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: attempt, error: attemptError } = await supabaseAdmin.from("custom_test_attempts")
+      .select("id, email, user_id").eq("id", data.attemptId).eq("access_hash", await digest(data.accessKey)).maybeSingle();
+    if (attemptError || !attempt) throw new Error("Attempt not found.");
+    if (attempt.email !== context.claims.email?.toLowerCase()) throw new Error("Sign in with the email used for this test.");
+    if (attempt.user_id && attempt.user_id !== context.userId) throw new Error("This attempt belongs to another account.");
     const { data: updated, error } = await supabaseAdmin.from("custom_test_attempts")
       .update({ user_id: context.userId }).eq("id", data.attemptId).eq("access_hash", await digest(data.accessKey)).is("user_id", null).select("id");
     if (error) throw new Error(error.message);
