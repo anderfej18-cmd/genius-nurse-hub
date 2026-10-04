@@ -6,7 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Brain, Trophy, Timer, Sparkles, ShieldCheck, GraduationCap } from "lucide-react";
 
-export const Route = createFileRoute("/")({ component: Index });
+export const Route = createFileRoute("/")({
+  component: Index,
+  head: () => ({ meta: [
+    { title: "NurseGenius — RN & RM Exam Practice" },
+    { name: "description", content: "Prepare for Nigerian nursing exams with timed RN and RM practice, explanations, and progress tracking." },
+    { property: "og:title", content: "NurseGenius — RN & RM Exam Practice" },
+    { property: "og:description", content: "Timed nursing exam practice, clear explanations, and progress tracking for RN and RM candidates." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
+});
 
 function Index() {
   const { user, profile, loading } = useAuth();

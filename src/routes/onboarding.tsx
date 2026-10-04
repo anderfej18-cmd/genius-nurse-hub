@@ -12,7 +12,11 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { claimSharedTestAttempt } from "@/lib/custom-tests.functions";
 
-export const Route = createFileRoute("/onboarding")({ component: Onboarding });
+export const Route = createFileRoute("/onboarding")({ component: Onboarding, head: () => ({ meta: [
+  { title: "Complete Your NurseGenius Profile" }, { name: "description", content: "Set up your nursing study profile and exam preferences." },
+  { property: "og:title", content: "Complete Your NurseGenius Profile" }, { property: "og:description", content: "Set up your nursing study profile and exam preferences." },
+  { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+] }) });
 
 function Onboarding() {
   const { user, profile, loading, refresh } = useAuth();
@@ -47,6 +51,7 @@ function Onboarding() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return toast.error("Sign in to save your profile.");
     if (!first.trim() || !last.trim()) return toast.error("First and last name required");
     const uname = username.trim().replace(/\s+/g, " ");
     if (!/^Nurse[A-Za-z0-9 _]{2,20}$/.test(uname)) return toast.error("Username must start with 'Nurse' followed by 2–20 letters, digits or spaces");
@@ -60,7 +65,7 @@ function Onboarding() {
       exam_date: examDate,
       exam_preference: pref,
       onboarded: true,
-    }).eq("id", user!.id);
+    }).eq("id", user.id);
     setBusy(false);
     if (error) {
       if (error.code === "23505") toast.error("That username is already taken");

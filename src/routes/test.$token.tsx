@@ -17,7 +17,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/test/$token")({
   component: SharedTestPage,
-  head: ({ params }) => ({
+  head: () => ({
     meta: [
       { title: "Shared Nursing Practice Test — NurseGenius" },
       { name: "description", content: "Complete a timed shared nursing practice test on NurseGenius." },
@@ -26,14 +26,38 @@ export const Route = createFileRoute("/test/$token")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex, nofollow" },
-      { name: "test-token", content: params.token },
     ],
   }),
 });
 
-type SharedTestData = Awaited<ReturnType<ReturnType<typeof getSharedTest>>>;
-type Question = SharedTestData["questions"][number];
-type TestResult = Awaited<ReturnType<ReturnType<typeof submitSharedTest>>>;
+interface Question {
+  id: string;
+  position: number;
+  question_text: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+}
+interface SharedTestData {
+  expired: boolean;
+  test: { id: string; title: string; description: string | null; exam_type: "RN" | "RM"; duration_minutes: number; expires_at: string } | null;
+  questions: Question[];
+}
+interface TestResultItem {
+  question_id: string;
+  question_position: number;
+  question_text: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_answer: string;
+  rationale: string | null;
+  user_answer: string | null;
+  is_correct: boolean;
+}
+interface TestResult { score: number; correct: number; total: number; results: TestResultItem[] }
 const SHARED_ATTEMPT_KEY = "ng.sharedTestAttempt";
 
 function SharedTestPage() {
@@ -134,10 +158,11 @@ function SharedTestPage() {
   };
 
   useEffect(() => {
-    if (attemptId && remaining === 0 && !result && duration > 0) void submit(true);
+    const deadlineReached = startedAt && duration > 0 && Date.now() >= new Date(startedAt).getTime() + duration * 60_000;
+    if (attemptId && deadlineReached && !result) void submit(true);
     // Submit once when the countdown ends.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remaining, attemptId, result, duration]);
+  }, [remaining, attemptId, result, duration, startedAt]);
 
   const start = async (event: React.FormEvent) => {
     event.preventDefault();

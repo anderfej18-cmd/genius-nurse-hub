@@ -9,7 +9,11 @@ import { Flag, ChevronLeft, ChevronRight, Send, Timer } from "lucide-react";
 import { toast } from "sonner";
 import { isCompleteQuestion } from "@/lib/questions";
 
-export const Route = createFileRoute("/exam/$examId/")({ component: ExamRuntime });
+export const Route = createFileRoute("/exam/$examId/")({ component: ExamRuntime, head: () => ({ meta: [
+  { title: "Timed Nursing Practice Exam — NurseGenius" }, { name: "description", content: "Complete your timed nursing exam practice and review your answers." },
+  { property: "og:title", content: "Timed Nursing Practice Exam — NurseGenius" }, { property: "og:description", content: "Complete your timed nursing exam practice." },
+  { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+] }) });
 
 interface Question {
   id: string;

@@ -9,7 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Trophy, Star, AlertCircle, Calendar } from "lucide-react";
 
-export const Route = createFileRoute("/dashboard")({ component: Dashboard });
+export const Route = createFileRoute("/dashboard")({ component: Dashboard, head: () => ({ meta: [
+  { title: "Study Dashboard — NurseGenius" }, { name: "description", content: "Review your nursing practice progress, daily question use, and recent test results." },
+  { property: "og:title", content: "Study Dashboard — NurseGenius" }, { property: "og:description", content: "Your nursing practice progress, daily question use, and recent test results." },
+  { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+] }) });
 
 interface ExamRow {
   id: string;

@@ -35,8 +35,12 @@ export const createCustomTest = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     if (!data.title.trim() || data.questions.length < 1 || data.questions.length > 250) throw new Error("Enter a title and between 1 and 250 questions.");
+    if (!/^[a-f0-9]{64}$/i.test(data.tokenHash)) throw new Error("Invalid test-link token.");
     if (data.durationMinutes < 10 || data.durationMinutes > 180) throw new Error("Duration must be between 10 minutes and 3 hours.");
     if (new Date(data.expiresAt).getTime() <= Date.now()) throw new Error("Link expiry must be in the future.");
+    if (data.questions.some((question) => !question.question_text.trim() || !question.option_a.trim() || !question.option_b.trim() || !question.option_c.trim() || !question.option_d.trim() || !/^[ABCD]$/i.test(question.correct_answer))) {
+      throw new Error("Every test question must include a question, four choices, and a valid correct answer.");
+    }
     const { data: test, error } = await supabaseAdmin.from("custom_tests").insert({
       owner_id: context.userId,
       title: data.title.trim(),
@@ -81,14 +85,21 @@ export const listCustomTests = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     const tests = data ?? [];
     const summaries = await Promise.all(tests.map(async (test) => {
-      const { data: analytics, error: analyticsError } = await supabaseAdmin.rpc("get_custom_test_analytics", { _custom_test_id: test.id });
-      if (analyticsError) throw new Error(analyticsError.message);
       const { data: attempts, error: attemptsError } = await supabaseAdmin.from("custom_test_attempts")
         .select("id, email, score_pct, correct_count, total_questions, completed_at")
         .eq("custom_test_id", test.id).eq("status", "completed").order("score_pct", { ascending: false }).limit(100);
       if (attemptsError) throw new Error(attemptsError.message);
       const { count } = await supabaseAdmin.from("custom_test_questions").select("id", { count: "exact", head: true }).eq("custom_test_id", test.id);
-      return { ...test, question_count: count ?? 0, analytics: analytics?.[0] ?? null, attempts: attempts ?? [] };
+      const scores = (attempts ?? []).map((attempt) => Number(attempt.score_pct ?? 0));
+      const passed = scores.filter((score) => score >= 50).length;
+      const analytics = {
+        participant_count: scores.length,
+        pass_count: passed,
+        fail_count: scores.length - passed,
+        pass_pct: scores.length ? Number(((passed / scores.length) * 100).toFixed(2)) : 0,
+        average_score: scores.length ? Number((scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2)) : 0,
+      };
+      return { ...test, question_count: count ?? 0, analytics, attempts: attempts ?? [] };
     }));
     return summaries;
   });
@@ -139,23 +150,29 @@ export const submitSharedTest = createServerFn({ method: "POST" })
   .inputValidator((data: { attemptId: string; accessKey: string; answers: Array<{ question_id: string; user_answer: string | null }> }) => data)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    if (data.answers.length > 250) throw new Error("Too many answers submitted.");
+    if (data.answers.length > 250 || data.answers.length < 1) throw new Error("Invalid answer list.");
+    if (new Set(data.answers.map((answer) => answer.question_id)).size !== data.answers.length) throw new Error("Duplicate answers were submitted.");
+    if (data.answers.some((answer) => answer.user_answer !== null && !/^[ABCD]$/i.test(answer.user_answer))) throw new Error("Invalid answer choice.");
     const accessHash = await digest(data.accessKey);
     const { data: attempt, error: attemptError } = await supabaseAdmin.from("custom_test_attempts")
       .select("id, custom_test_id, started_at, total_questions, status")
       .eq("id", data.attemptId).eq("access_hash", accessHash).maybeSingle();
     if (attemptError || !attempt) throw new Error("Attempt not found.");
     if (attempt.status === "completed") throw new Error("This test has already been submitted.");
-    const { data: test } = await supabaseAdmin.from("custom_tests").select("duration_minutes")
+    const { data: test, error: testError } = await supabaseAdmin.from("custom_tests").select("duration_minutes")
       .eq("id", attempt.custom_test_id).maybeSingle();
+    if (testError || !test) throw new Error("Could not verify this test's time limit.");
     const deadline = new Date(attempt.started_at).getTime() + Number(test?.duration_minutes ?? 0) * 60_000;
-    if (Date.now() < deadline && data.answers.filter((answer) => answer.user_answer !== null).length < Math.ceil(attempt.total_questions * 0.8)) {
-      throw new Error(`Answer at least ${Math.ceil(attempt.total_questions * 0.8)} questions before submitting.`);
-    }
     const { data: questions, error: questionsError } = await supabaseAdmin.from("custom_test_questions")
       .select("id, position, question_text, option_a, option_b, option_c, option_d, correct_answer, rationale")
       .eq("custom_test_id", attempt.custom_test_id).order("position");
     if (questionsError || !questions) throw new Error("Could not load test answers.");
+    const validQuestionIds = new Set(questions.map((question) => question.id));
+    if (data.answers.some((answer) => !validQuestionIds.has(answer.question_id))) throw new Error("An answer does not belong to this test.");
+    const answered = data.answers.filter((answer) => answer.user_answer !== null).length;
+    if (Date.now() < deadline && answered < Math.ceil(attempt.total_questions * 0.8)) {
+      throw new Error(`Answer at least ${Math.ceil(attempt.total_questions * 0.8)} questions before submitting.`);
+    }
     const answerById = new Map(data.answers.map((answer) => [answer.question_id, answer.user_answer?.toUpperCase() ?? null]));
     const results = questions.map((question) => {
       const answer = answerById.get(question.id) ?? null;
@@ -215,13 +232,13 @@ export const importCustomTestQuestions = createServerFn({ method: "POST" })
     await assertAdmin(context);
     if (!data.topic.trim()) throw new Error("Enter the destination subcategory.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: test, error: testError } = await supabaseAdmin.from("custom_tests").select("id").eq("id", data.testId).eq("owner_id", context.userId).maybeSingle();
+    const { data: test, error: testError } = await supabaseAdmin.from("custom_tests").select("id, exam_type").eq("id", data.testId).eq("owner_id", context.userId).maybeSingle();
     if (testError || !test) throw new Error("Test not found or not owned by you.");
     const { data: questions, error } = await supabaseAdmin.from("custom_test_questions").select("question_text, option_a, option_b, option_c, option_d, correct_answer, rationale")
       .eq("custom_test_id", data.testId).eq("imported_to_bank", false);
     if (error) throw new Error(error.message);
     if (!questions?.length) return { count: 0 };
-    const { error: insertError } = await supabaseAdmin.from("questions").insert(questions.map((question) => ({ ...question, exam_type: data.examType, topic: data.topic.trim(), created_by: context.userId })));
+    const { error: insertError } = await supabaseAdmin.from("questions").insert(questions.map((question) => ({ ...question, exam_type: test.exam_type, topic: data.topic.trim(), created_by: context.userId })));
     if (insertError) throw new Error(insertError.message);
     const { error: updateError } = await supabaseAdmin.from("custom_test_questions").update({ imported_to_bank: true, imported_at: new Date().toISOString() }).eq("custom_test_id", data.testId).eq("imported_to_bank", false);
     if (updateError) throw new Error(updateError.message);
