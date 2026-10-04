@@ -158,10 +158,11 @@ function SharedTestPage() {
   };
 
   useEffect(() => {
-    if (attemptId && remaining === 0 && !result && duration > 0) void submit(true);
+    const deadlineReached = startedAt && duration > 0 && Date.now() >= new Date(startedAt).getTime() + duration * 60_000;
+    if (attemptId && deadlineReached && !result) void submit(true);
     // Submit once when the countdown ends.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remaining, attemptId, result, duration]);
+  }, [remaining, attemptId, result, duration, startedAt]);
 
   const start = async (event: React.FormEvent) => {
     event.preventDefault();
