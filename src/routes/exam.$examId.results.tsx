@@ -9,7 +9,11 @@ import { Sparkles, Copy, Check, Trophy, Star, AlertCircle, Loader2 } from "lucid
 import { toast } from "sonner";
 import { isCompleteQuestion } from "@/lib/questions";
 
-export const Route = createFileRoute("/exam/$examId/results")({ component: Results });
+export const Route = createFileRoute("/exam/$examId/results")({ component: Results, head: () => ({ meta: [
+  { title: "Practice Exam Results — NurseGenius" }, { name: "description", content: "Review your nursing practice score, answers, and explanations." },
+  { property: "og:title", content: "Practice Exam Results — NurseGenius" }, { property: "og:description", content: "Review your nursing practice score and answer explanations." },
+  { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+] }) });
 
 interface QuestionShape {
   id: string; question_text: string; correct_answer: string; rationale: string | null; topic: string;

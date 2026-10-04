@@ -12,7 +12,11 @@ import { toast } from "sonner";
 import { fetchTopics } from "@/lib/topics";
 import { isCompleteQuestion } from "@/lib/questions";
 
-export const Route = createFileRoute("/exam/start")({ component: ExamStart });
+export const Route = createFileRoute("/exam/start")({ component: ExamStart, head: () => ({ meta: [
+  { title: "Start a Practice Exam — NurseGenius" }, { name: "description", content: "Choose an RN or RM nursing practice exam, study area, question count, and time limit." },
+  { property: "og:title", content: "Start a Practice Exam — NurseGenius" }, { property: "og:description", content: "Set up a timed RN or RM nursing practice exam." },
+  { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+] }) });
 
 const ALL_AREAS = "All Areas";
 

@@ -22,7 +22,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Copy, Link2, Pencil, Plus, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 
-export const Route = createFileRoute("/admin")({ component: Admin });
+export const Route = createFileRoute("/admin")({ component: Admin, head: () => ({ meta: [
+  { title: "Administration — NurseGenius" }, { name: "description", content: "Manage NurseGenius nursing practice questions, users, and shared tests." },
+  { property: "og:title", content: "Administration — NurseGenius" }, { property: "og:description", content: "Manage nursing practice questions, users, and shared tests." },
+  { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+] }) });
 
 function Admin() {
   const { user, isAdmin, isCentralAdmin, loading } = useAuth();

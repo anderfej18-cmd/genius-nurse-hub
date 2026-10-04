@@ -5,7 +5,11 @@ import { AppHeader } from "@/components/AppHeader";
 import { LeaderboardTable } from "@/components/LeaderboardTable";
 import { Trophy } from "lucide-react";
 
-export const Route = createFileRoute("/leaderboard")({ component: Leaderboard });
+export const Route = createFileRoute("/leaderboard")({ component: Leaderboard, head: () => ({ meta: [
+  { title: "Nursing Practice Leaderboard — NurseGenius" }, { name: "description", content: "See daily and weekly rankings from NurseGenius nursing exam practice." },
+  { property: "og:title", content: "Nursing Practice Leaderboard — NurseGenius" }, { property: "og:description", content: "Daily and weekly rankings from NurseGenius nursing exam practice." },
+  { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+] }) });
 
 function Leaderboard() {
   const { user, profile, loading } = useAuth();

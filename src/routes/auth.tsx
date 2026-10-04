@@ -11,7 +11,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { z } from "zod";
 
-export const Route = createFileRoute("/auth")({ component: AuthPage });
+export const Route = createFileRoute("/auth")({ component: AuthPage, head: () => ({ meta: [
+  { title: "Sign In or Join — NurseGenius" }, { name: "description", content: "Sign in or create a NurseGenius account for RN and RM exam practice." },
+  { property: "og:title", content: "Sign In or Join — NurseGenius" }, { property: "og:description", content: "Access RN and RM exam practice with a NurseGenius account." },
+  { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+] }) });
 
 const emailSchema = z.string().trim().email().max(255);
 const pwSchema = z.string().min(6).max(72);
