@@ -19,10 +19,19 @@ const pwSchema = z.string().min(6).max(72);
 function AuthPage() {
   const { user, profile, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const [testEmail, setTestEmail] = useState("");
+
+  useEffect(() => {
+    try {
+      const pending = sessionStorage.getItem("ng.sharedTestAttempt");
+      if (pending) setTestEmail((JSON.parse(pending) as { email?: string }).email ?? "");
+    } catch { setTestEmail(""); }
+  }, []);
 
   useEffect(() => {
     if (!loading && user) {
-      navigate({ to: isAdmin ? "/admin" : profile?.onboarded ? "/dashboard" : "/onboarding" });
+      if (sessionStorage.getItem("ng.sharedTestAttempt")) navigate({ to: "/onboarding" });
+      else navigate({ to: isAdmin ? "/admin" : profile?.onboarded ? "/dashboard" : "/onboarding" });
     }
   }, [loading, user, profile, isAdmin, navigate]);
 
@@ -39,8 +48,8 @@ function AuthPage() {
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
-            <TabsContent value="signin"><SignInForm /></TabsContent>
-            <TabsContent value="signup"><SignUpForm /></TabsContent>
+            <TabsContent value="signin"><SignInForm initialEmail={testEmail} /></TabsContent>
+            <TabsContent value="signup"><SignUpForm initialEmail={testEmail} /></TabsContent>
           </Tabs>
 
           <div className="my-4 flex items-center gap-3">
@@ -56,10 +65,12 @@ function AuthPage() {
   );
 }
 
-function SignInForm() {
+function SignInForm({ initialEmail }: { initialEmail: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => { if (initialEmail) setEmail(initialEmail); }, [initialEmail]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,10 +92,12 @@ function SignInForm() {
   );
 }
 
-function SignUpForm() {
+function SignUpForm({ initialEmail }: { initialEmail: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => { if (initialEmail) setEmail(initialEmail); }, [initialEmail]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
