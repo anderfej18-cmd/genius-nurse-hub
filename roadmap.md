@@ -4,4 +4,4 @@
 - [ ] Verify role controls and privacy-safe user view
 - [ ] Complete the approved shared custom-test creation, delivery, results, and analytics flow
 - [ ] Diagnose and fix account tier refresh after successful Paystack payment
-- [ ] Add a project README and push NurseGenius to the requested public GitHub repository
+- [x] Add a project README and push NurseGenius to the requested public GitHub repository
