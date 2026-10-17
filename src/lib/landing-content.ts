@@ -332,3 +332,251 @@ export function allLandingCopy(): string[] {
   ]);
   return out;
 }
+
+export const landingMeta = {
+  title: "NurseGenius: RN and RM exam practice with a study plan",
+  description:
+    "Timed RN and RM practice with the reasoning behind every answer, a mistake bank, and a study plan built from your own results.",
+} as const;
+
+export const landingNav = {
+  skip: "Skip to content",
+  links: [
+    { label: "How it works", href: "#how" },
+    { label: "Practice", href: "#practice" },
+    { label: "Progress", href: "#progress" },
+    { label: "Plans", href: "#plans" },
+    { label: "FAQ", href: "#faq" },
+  ],
+  signIn: "Sign in",
+  getStarted: "Get started",
+  dashboard: "Go to your dashboard",
+  openMenu: "Open menu",
+  menuHint: "Jump to a section.",
+} as const;
+
+export const landingHero = {
+  title: "Know what to study next.",
+  body: "Timed RN and RM practice with the reasoning behind every answer, and a study plan built from your own results.",
+  primary: "Get started",
+  secondary: "Explore features",
+  note: "Free to start. The Novice plan allows 50 questions a day.",
+  caption: "The layout of a test. Questions come from the question bank when you start one.",
+  previewLabel:
+    "Test preview with placeholder bars: RN, timer, flag, previous, next, and options A to D",
+} as const;
+
+export const landingHow = {
+  title: "From the first question to exam day",
+  lead: "Four steps, and each one feeds the next.",
+  steps: [
+    {
+      title: "Choose RN or RM",
+      body: "Say which programme you are preparing for, or both. You pick one each time you start a test.",
+    },
+    {
+      title: "Practise by topic or mix everything",
+      body: "Set how many questions and how many minutes, from 5 to 180, then start.",
+    },
+    {
+      title: "Read the reasoning",
+      body: "After you submit, see the correct answer and why it is correct, question by question.",
+    },
+    {
+      title: "Follow the plan",
+      body: "Your answers shape a weekly plan to your exam date and show which topics need work.",
+    },
+  ],
+} as const;
+
+export const landingPathways = {
+  title: "Two programmes, kept apart",
+  lead: "RN and RM have their own questions and their own topics, and your readiness is estimated for each on its own.",
+  rn: {
+    code: "RN",
+    title: "RN – Registered Nurse",
+    intro: "Questions grouped by topic, from a single topic to every area at once.",
+    points: [
+      "Topics are listed with their question counts once you sign in",
+      "Mastery is tracked topic by topic",
+      "Readiness is estimated for RN on its own",
+    ],
+  },
+  rm: {
+    code: "RM",
+    title: "RM – Registered Midwife",
+    intro: "The same tools, applied to the midwifery question bank.",
+    points: [
+      "Practise one topic or mix all areas",
+      "Mastery is tracked topic by topic",
+      "Readiness is estimated for RM on its own",
+    ],
+  },
+} as const;
+
+export const landingPractice = {
+  title: "A test that behaves like an exam",
+  lead: "Every test has a timer, a question navigator and a flag for questions you want to revisit. The server keeps the time and scores the test, so the result cannot be edited on your phone.",
+  features: ["Timer", "Question navigator", "Flag"],
+  points: [
+    "Tests run from 5 to 180 minutes, and finish by themselves when time is up.",
+    "Correct answers and rationales appear after you submit, in every mode.",
+    "Questions come only from the NurseGenius question bank. The app never invents a question to fill a test.",
+  ],
+  modesTitle: "Four ways to choose your questions",
+  modes: [
+    { title: "Random", body: "A random draw from the bank." },
+    {
+      title: "Focus on my weak areas",
+      body: "Weights weak topics, due reviews, past mistakes and unseen questions.",
+    },
+    {
+      title: "Review my mistakes",
+      body: "Questions you missed and have not got right since.",
+    },
+    {
+      title: "Revision due today",
+      body: "Questions whose review date has arrived.",
+    },
+  ],
+} as const;
+
+export const landingProgress = {
+  title: "See where you stand, honestly",
+  lead1:
+    "Each topic gets a level based on your own answers, weighted toward recent ones. A short lucky streak does not make a topic mastered.",
+  lead2:
+    "Exam readiness is shown for RN and RM separately. When there is not enough evidence it says so instead of guessing a number.",
+  tags: ["Confidence and pace", "Repeated mistakes", "Reviews that are overdue"],
+  gaugeLabel: "Readiness for RN and for RM shown as two separate gauges",
+  levelsTitle: "The levels a topic can have",
+  levels: [
+    {
+      key: "none",
+      title: "Not enough data yet",
+      body: "Too few answers to say anything fair yet, so no level is shown.",
+    },
+    { key: "weak", title: "Weak", body: "Needs the most attention. Practise it first." },
+    {
+      key: "developing",
+      title: "Developing",
+      body: "Getting there. Keep practising and review mistakes.",
+    },
+    {
+      key: "proficient",
+      title: "Proficient",
+      body: "Solid results on a fair number of answers.",
+    },
+    {
+      key: "mastered",
+      title: "Mastered",
+      body: "Strong results backed by plenty of answers, not a handful.",
+    },
+  ],
+} as const;
+
+export const landingAi = {
+  title: "AI that explains. The numbers come from your answers.",
+  lead: "The AI does not choose your questions or change your scores. Selection is rule-based and the same every time.",
+  ask: {
+    title: "Ask about any question, after you finish",
+    body: "Explain it, simplify it, compare the options, or ask why your answer was wrong. Help is available once a test is submitted, never during it.",
+  },
+  summaries: {
+    title: "Study summaries that say where they came from",
+    body: "Your scores, levels and plan are calculated by the app. A summary is marked AI-assisted only when the AI's wording checked out against those numbers. Otherwise you get a plain computed summary, labelled as one.",
+    labelsAria: "The two labels a summary can carry",
+    labels: ["AI-assisted", "Computed summary"],
+  },
+} as const;
+
+export const landingPlan = {
+  title: "A plan that works back from your exam date",
+  lead: "Set your exam date and NurseGenius builds a week-by-week plan. Every item says why it is there, and weeks you have finished are kept.",
+  timelineLabel: "Timeline from today to your exam date",
+  today: "Today",
+  exam: "Your exam date",
+  items: [
+    {
+      title: "Progress comes from real answers",
+      body: "A plan item is complete when your answers show it, not when you tick a box.",
+    },
+    {
+      title: "Insight beyond the score",
+      body: "Trends, repeated mistakes, reviews that are overdue, and how fast you answer.",
+    },
+    {
+      title: "Today's focus",
+      body: "A short daily recommendation, a study streak and a daily challenge keep the next step obvious.",
+    },
+  ],
+} as const;
+
+export const landingPlans = {
+  title: "Start free, upgrade when you need more",
+  lead: "Limits are the same ones the app enforces. Prices are read live from NurseGenius and paid in naira by card through Paystack.",
+  caption: "What each plan allows and costs",
+  firstColumn: "What the plan includes",
+  fallback: "Shown after you sign in",
+  rows: {
+    perDay: { label: "Questions per day", novice: "50", erudite: "500", scholar: "Unlimited" },
+    perTest: { label: "Most questions in one test", novice: "50", erudite: "150", scholar: "250" },
+    price: { label: "Price", novice: "Free" },
+    access: { label: "Access", novice: "No expiry" },
+  },
+} as const;
+
+export const landingFaq = {
+  title: "Questions people ask first",
+  items: [
+    {
+      q: "Is NurseGenius free?",
+      a: "You can start free. The Novice plan allows 50 questions a day and 50 in one test. Erudite and Scholar raise those limits.",
+    },
+    {
+      q: "What do RN and RM stand for?",
+      a: "RN is Registered Nurse and RM is Registered Midwife. You choose which one to practise each time you start a test.",
+    },
+    {
+      q: "When do I see the correct answers?",
+      a: "After you submit the test, in every mode. The answer key is never sent to your phone while the test is running.",
+    },
+    {
+      q: "Who scores my test?",
+      a: "The server does, from the answers it has saved. The timer is kept there too, so the test ends on time wherever you are.",
+    },
+    {
+      q: "How are my questions chosen?",
+      a: "You pick: random, focused on your weak areas, your past mistakes, or revision that is due today. The choice follows fixed rules. AI does not pick questions.",
+    },
+    {
+      q: "How do I pay for a bigger plan?",
+      a: "In naira by card through Paystack. Your plan starts after Paystack confirms the payment.",
+    },
+    {
+      q: "Can I practise on my phone?",
+      a: "Yes. Every page, including the test itself, is laid out for a phone screen first and grows from there.",
+    },
+  ],
+} as const;
+
+export const landingCta = {
+  title: "Start with one test.",
+  body: "Pick RN or RM, choose a topic and see how you do. Your first results already start shaping what to study next.",
+  primary: "Get started",
+  secondary: "Sign in",
+} as const;
+
+export const landingFooter = {
+  tagline: "RN and RM exam practice, with a plan.",
+  exploreTitle: "Explore",
+  explore: [
+    { label: "How it works", href: "#how" },
+    { label: "Practice", href: "#practice" },
+    { label: "Progress", href: "#progress" },
+    { label: "Study plans", href: "#plan" },
+  ],
+  accountTitle: "Account",
+  signIn: "Sign in",
+  create: "Create an account",
+} as const;

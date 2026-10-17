@@ -28,25 +28,17 @@ export function PulseTrace({ className }: { className?: string }) {
   );
 }
 
-/** The wordmark's tile: evergreen with a single mint beat, the same in light and dark. */
+/** The NurseGenius logo mark, sized via the className prop (e.g. size-8, size-9). */
 export function BrandMark({ className }: { className?: string }) {
   return (
-    <span
+    <img
+      src="/images/landing/logo.webp"
+      alt=""
       aria-hidden="true"
-      className={cn(
-        "flex size-9 shrink-0 items-center justify-center rounded-md bg-mark",
-        className,
-      )}
-    >
-      <svg viewBox="0 0 24 24" className="size-5" fill="none">
-        <path
-          d="M2 13 H7 L9.5 6 L13 19 L15.5 11 H22"
-          stroke="var(--mark-foreground)"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
+      width={384}
+      height={384}
+      decoding="async"
+      className={cn("block shrink-0 object-contain mix-blend-multiply", className ?? "size-9")}
+    />
   );
 }

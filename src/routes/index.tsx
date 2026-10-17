@@ -1,17 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { AiHelp } from "@/components/landing/AiHelp";
-import { Faq } from "@/components/landing/Faq";
-import { FinalCta } from "@/components/landing/FinalCta";
-import { Hero } from "@/components/landing/Hero";
-import { HowItWorks } from "@/components/landing/HowItWorks";
-import { LandingFooter } from "@/components/landing/LandingFooter";
-import { LandingNav } from "@/components/landing/LandingNav";
-import { Mastery } from "@/components/landing/Mastery";
-import { Pathways } from "@/components/landing/Pathways";
-import { PlansTable } from "@/components/landing/PlansTable";
-import { Practice } from "@/components/landing/Practice";
-import { StudyPlan } from "@/components/landing/StudyPlan";
+import { useEffect, useState } from "react";
+import { LandingPage, type LivePlan } from "@/components/landing/LandingPage";
+import { listPublicPlans } from "@/functions/plans.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { resolveToken } from "@/lib/design-tokens";
 
@@ -19,7 +9,31 @@ const TITLE = "NurseGenius: RN and RM exam practice with a study plan";
 const DESCRIPTION =
   "Timed RN and RM practice with the reasoning behind every answer, a mistake bank, and a study plan built from your own results.";
 
+const CONTRACT_DEFAULT_PLANS: LivePlan[] = [
+  { name: "Erudite", priceNaira: 1500, accessDays: 30 },
+  { name: "Scholar", priceNaira: 2000, accessDays: 30 },
+];
+
 export const Route = createFileRoute("/")({
+  loader: async () => {
+    try {
+      const data = await listPublicPlans({ data: {} });
+      const live: LivePlan[] = [];
+      if (Array.isArray(data)) {
+        for (const p of data) {
+          const rawName = p.name.trim().toLowerCase();
+          if (rawName === "erudite") {
+            live.push({ name: "Erudite", priceNaira: p.priceNgn, accessDays: p.durationDays });
+          } else if (rawName === "scholar") {
+            live.push({ name: "Scholar", priceNaira: p.priceNgn, accessDays: p.durationDays });
+          }
+        }
+      }
+      return { initialPlans: live.length > 0 ? live : CONTRACT_DEFAULT_PLANS };
+    } catch {
+      return { initialPlans: CONTRACT_DEFAULT_PLANS };
+    }
+  },
   component: Index,
   head: () => ({
     meta: [
@@ -39,38 +53,54 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
+  const loaderData = Route.useLoaderData();
+  const [plans, setPlans] = useState<LivePlan[] | undefined>(loaderData?.initialPlans);
 
   // A signed-in person who has not finished setting up goes on to finish it.
   useEffect(() => {
     if (!loading && user && profile && !profile.onboarded) navigate({ to: "/onboarding" });
   }, [loading, user, profile, navigate]);
 
+  // Keep dynamic plans synchronized with the database
+  useEffect(() => {
+    let cancelled = false;
+    listPublicPlans({ data: {} }).then(
+      (data) => {
+        if (!cancelled && Array.isArray(data)) {
+          const live: LivePlan[] = [];
+          for (const p of data) {
+            const rawName = p.name.trim().toLowerCase();
+            if (rawName === "erudite") {
+              live.push({ name: "Erudite", priceNaira: p.priceNgn, accessDays: p.durationDays });
+            } else if (rawName === "scholar") {
+              live.push({ name: "Scholar", priceNaira: p.priceNgn, accessDays: p.durationDays });
+            }
+          }
+          if (live.length > 0) setPlans(live);
+        }
+      },
+      () => {
+        // Honest failure handling: leaving plans undefined renders the fallback "Shown after you sign in"
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const signedIn = !!user;
 
   return (
     // The landing page is always light: `theme-fixed` pins the light tokens whatever the visitor's
-    // own theme preference is.
-    <div className="theme-fixed min-h-dvh bg-background text-foreground">
-      <a
-        href="#main"
-        className="sr-only z-50 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
-      >
-        Skip to content
-      </a>
-      <LandingNav signedIn={signedIn} />
-      <main id="main">
-        <Hero signedIn={signedIn} />
-        <HowItWorks />
-        <Pathways />
-        <Practice />
-        <Mastery />
-        <AiHelp />
-        <StudyPlan />
-        <PlansTable />
-        <Faq />
-        <FinalCta signedIn={signedIn} />
-      </main>
-      <LandingFooter signedIn={signedIn} />
+    // own theme preference is. Skip link href="#main" and landmark id="main" are in LandingPage.
+    <div className="theme-fixed">
+      <LandingPage
+        plans={plans}
+        signedIn={signedIn}
+        signInHref="/auth"
+        signUpHref="/auth?mode=signup"
+        dashboardHref="/dashboard"
+      />
     </div>
   );
 }

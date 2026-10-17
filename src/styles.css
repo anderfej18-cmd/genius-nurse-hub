@@ -1,6 +1,7 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+@import "./styles/landing-theme.css";
 
 /* NurseGenius design system. Values mirror src/lib/design-tokens.ts (a test keeps them identical);
    the rules behind them are in docs/design/DESIGN.md. Components use only the semantic tokens. */

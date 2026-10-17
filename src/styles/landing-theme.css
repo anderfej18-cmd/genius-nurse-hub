@@ -1,0 +1,265 @@
+/*
+ * Landing page tokens (light only). Append to src/styles.css, or import after it.
+ * Names are prefixed ng- so they cannot clash with your existing semantic tokens.
+ * Tailwind 4 turns each --color-ng-* into utilities: bg-ng-bg, text-ng-ink, border-ng-border, ...
+ */
+
+@theme {
+  --color-ng-bg: #f6f3ec;
+  --color-ng-ink: #13221f;
+  --color-ng-card: #fffdf8;
+  --color-ng-raised: #ffffff;
+  --color-ng-sunken: #efeae0;
+  --color-ng-primary: #0e5a4f;
+  --color-ng-on-primary: #f4fbf8;
+  --color-ng-primary-strong: #0a443c;
+  --color-ng-muted: #56645f;
+  --color-ng-accent: #d8f5e8;
+  --color-ng-accent-text: #0a443c;
+  --color-ng-signal: #3fd99a;
+  --color-ng-signal-hover: #62e4ae;
+  --color-ng-on-signal: #062019;
+  --color-ng-border: #e2dbcd;
+  --color-ng-divider: #ebe5d9;
+  --color-ng-input: #72837b;
+  --color-ng-ok: #1b7750;
+  --color-ng-ok-bg: #ddf1e6;
+  --color-ng-warn: #905507;
+  --color-ng-warn-bg: #f8e9cc;
+  --color-ng-err: #b4322b;
+  --color-ng-err-bg: #f9e0dc;
+  --color-ng-info: #2565a8;
+  --color-ng-info-bg: #dce9f7;
+  --color-ng-rn: #0e8a7a;
+  --color-ng-rn-text: #0a6f63;
+  --color-ng-rn-soft: #d5efea;
+  --color-ng-rm: #c8613d;
+  --color-ng-rm-text: #9e4a28;
+  --color-ng-rm-soft: #f6dfd4;
+
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Figtree", ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-ng: 0 1px 2px rgb(14 90 79 / 0.06), 0 14px 36px rgb(14 90 79 / 0.1);
+  --ease-ng: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@layer components {
+  .ng-root {
+    background: var(--color-ng-bg);
+    color: var(--color-ng-ink);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+  }
+  .ng-display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.04;
+    text-wrap: balance;
+  }
+  .ng-h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+    font-size: clamp(32px, 4.6vw, 56px);
+    text-wrap: balance;
+  }
+  .ng-h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    font-size: clamp(22px, 2.2vw, 28px);
+  }
+  .ng-lead {
+    font-size: clamp(17px, 1.5vw, 20px);
+    line-height: 1.55;
+    color: var(--color-ng-muted);
+    max-width: 60ch;
+    text-wrap: pretty;
+  }
+  .ng-btn {
+    display: inline-flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    padding-inline: 26px;
+    font-weight: 700;
+    white-space: nowrap;
+    transition:
+      transform 160ms var(--ease-ng),
+      background-color 160ms var(--ease-ng);
+  }
+  .ng-btn:active {
+    transform: scale(0.97);
+  }
+  .ng-focus:focus-visible {
+    outline: 3px solid var(--color-ng-primary);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+  .ng-dark .ng-focus:focus-visible {
+    outline-color: var(--color-ng-signal);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .ng-lift {
+      transition:
+        transform 220ms var(--ease-ng),
+        box-shadow 220ms var(--ease-ng);
+    }
+    .ng-lift:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-ng);
+    }
+  }
+
+  /* Sticky header shadow on scroll */
+  .ng-header-scrolled {
+    box-shadow:
+      0 1px 3px rgb(14 90 79 / 0.06),
+      0 4px 12px rgb(14 90 79 / 0.04);
+  }
+
+  /* Scroll-reveal entrance (IntersectionObserver toggles .is-visible) */
+  .ng-reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition:
+      opacity 500ms var(--ease-ng),
+      transform 500ms var(--ease-ng);
+  }
+  .ng-reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* FAQ accordion panel */
+  .ng-accordion-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 280ms var(--ease-ng);
+  }
+  .ng-accordion-panel[data-open="true"] {
+    grid-template-rows: 1fr;
+  }
+  .ng-accordion-inner {
+    overflow: hidden;
+  }
+
+  /* Arrow nudge on hover (for CTA buttons) */
+  @media (hover: hover) and (pointer: fine) {
+    .ng-arrow-nudge .ng-arrow {
+      transition: transform 200ms var(--ease-ng);
+    }
+    .ng-arrow-nudge:hover .ng-arrow {
+      transform: translateX(3px);
+    }
+  }
+
+  /* Nav link active indicator */
+  .ng-nav-link {
+    position: relative;
+    transition: background-color 160ms var(--ease-ng);
+  }
+
+  /* Hero section grid and image */
+  .hero-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: end;
+    row-gap: 2rem;
+  }
+  @media (min-width: 768px) {
+    .hero-content {
+      grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: 20px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .hero-content {
+      grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: 28px;
+    }
+  }
+  @media (min-width: 1280px) {
+    .hero-content {
+      grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: 36px;
+    }
+  }
+
+  .hero-copy {
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+    align-self: center;
+  }
+
+  .hero-image {
+    display: block;
+    width: 100%;
+    max-width: 440px;
+    height: auto;
+    max-height: 360px;
+    object-fit: contain;
+    object-position: bottom right;
+    justify-self: center;
+    align-self: end;
+  }
+  @media (min-width: 768px) {
+    .hero-image {
+      width: auto;
+      height: 340px;
+      max-width: 420px;
+      max-height: none;
+      justify-self: end;
+    }
+  }
+  @media (min-width: 1024px) {
+    .hero-image {
+      width: auto;
+      height: 440px;
+      max-width: 530px;
+      max-height: none;
+      justify-self: end;
+    }
+  }
+  @media (min-width: 1280px) {
+    .hero-image {
+      width: auto;
+      height: 520px;
+      max-width: 630px;
+      max-height: none;
+      justify-self: end;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ng-root {
+      scroll-behavior: auto;
+    }
+    .ng-btn,
+    .ng-lift {
+      transition: none;
+    }
+    .ng-reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+    .ng-accordion-panel {
+      transition: none;
+    }
+    .ng-arrow-nudge .ng-arrow {
+      transition: none;
+    }
+  }
+}
