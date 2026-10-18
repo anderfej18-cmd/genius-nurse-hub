@@ -7,9 +7,10 @@ import {
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
+import { lazy, Suspense } from "react";
 import { NotFoundPage, RouteErrorPage } from "@/components/StatusPages";
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+
+const Toaster = lazy(() => import("@/components/ui/sonner").then((m) => ({ default: m.Toaster })));
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/theme-provider";
 import { themeInitScript } from "@/lib/theme";
@@ -66,10 +67,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
+      // DNS prefetch / preconnect for Supabase (speeds up auth and data fetches)
+      {
+        rel: "preconnect",
+        href: import.meta.env.VITE_SUPABASE_URL || "https://csfvyiunxqtjlxvbbwfl.supabase.co",
+      },
+      {
+        rel: "dns-prefetch",
+        href: import.meta.env.VITE_SUPABASE_URL || "https://csfvyiunxqtjlxvbbwfl.supabase.co",
+      },
+      // Favicons
       { rel: "icon", href: "/favicon.ico", sizes: "any" },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
-      { rel: "icon", type: "image/webp", href: "/images/landing/logo.webp" },
-      { rel: "apple-touch-icon", href: "/favicon.png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "stylesheet", href: appCss },
       // The two faces above the fold load before the stylesheet asks for them.
       {
@@ -117,10 +127,10 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <TooltipProvider>
-            <Outlet />
+          <Outlet />
+          <Suspense fallback={null}>
             <Toaster richColors position="top-right" />
-          </TooltipProvider>
+          </Suspense>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

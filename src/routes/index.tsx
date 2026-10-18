@@ -47,6 +47,17 @@ export const Route = createFileRoute("/")({
       { name: "twitter:description", content: DESCRIPTION },
       { name: "theme-color", content: resolveToken("light", "background") },
     ],
+    links: [
+      // Preload the LCP hero image so the browser fetches it during HTML parsing,
+      // before the JS bundle has been parsed and executed.
+      {
+        rel: "preload",
+        href: "/images/landing/hero-nurses-transparent.webp",
+        as: "image",
+        type: "image/webp",
+        fetchPriority: "high",
+      },
+    ],
   }),
 });
 

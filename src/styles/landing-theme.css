@@ -132,6 +132,7 @@
   .ng-reveal {
     opacity: 0;
     transform: translateY(12px);
+    will-change: opacity, transform;
     transition:
       opacity 500ms var(--ease-ng),
       transform 500ms var(--ease-ng);
@@ -139,6 +140,7 @@
   .ng-reveal.is-visible {
     opacity: 1;
     transform: none;
+    will-change: auto;
   }
 
   /* FAQ accordion panel */
@@ -254,6 +256,7 @@
       opacity: 1;
       transform: none;
       transition: none;
+      will-change: auto;
     }
     .ng-accordion-panel {
       transition: none;
