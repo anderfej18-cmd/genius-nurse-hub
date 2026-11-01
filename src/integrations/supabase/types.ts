@@ -495,6 +495,7 @@ export type Database = {
           correct_answer: string
           created_at: string
           created_by: string | null
+          difficulty: string | null
           exam_type: Database["public"]["Enums"]["exam_type"]
           id: string
           option_a: string
@@ -503,13 +504,19 @@ export type Database = {
           option_d: string
           question_text: string
           rationale: string | null
+          source: string | null
+          status: string
+          subtopic_id: string | null
+          tags: string[]
           topic: string
+          updated_at: string
           year: number | null
         }
         Insert: {
           correct_answer: string
           created_at?: string
           created_by?: string | null
+          difficulty?: string | null
           exam_type: Database["public"]["Enums"]["exam_type"]
           id?: string
           option_a: string
@@ -518,13 +525,19 @@ export type Database = {
           option_d: string
           question_text: string
           rationale?: string | null
+          source?: string | null
+          status?: string
+          subtopic_id?: string | null
+          tags?: string[]
           topic?: string
+          updated_at?: string
           year?: number | null
         }
         Update: {
           correct_answer?: string
           created_at?: string
           created_by?: string | null
+          difficulty?: string | null
           exam_type?: Database["public"]["Enums"]["exam_type"]
           id?: string
           option_a?: string
@@ -533,10 +546,23 @@ export type Database = {
           option_d?: string
           question_text?: string
           rationale?: string | null
+          source?: string | null
+          status?: string
+          subtopic_id?: string | null
+          tags?: string[]
           topic?: string
+          updated_at?: string
           year?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "questions_subtopic_id_fkey"
+            columns: ["subtopic_id"]
+            isOneToOne: false
+            referencedRelation: "subtopics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       receipt_fingerprints: {
         Row: {
@@ -600,6 +626,30 @@ export type Database = {
           plan_name?: string
           reference?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      subtopics: {
+        Row: {
+          created_at: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id: string
+          name: string
+          topic: string
+        }
+        Insert: {
+          created_at?: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id?: string
+          name: string
+          topic: string
+        }
+        Update: {
+          created_at?: string
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          id?: string
+          name?: string
+          topic?: string
         }
         Relationships: []
       }
@@ -743,6 +793,13 @@ export type Database = {
           correct: number
           user_id: string
           username: string
+        }[]
+      }
+      get_question_topic_counts: {
+        Args: { _exam_type: Database["public"]["Enums"]["exam_type"] }
+        Returns: {
+          topic: string
+          total: number
         }[]
       }
       get_subadmin_user_directory: {
