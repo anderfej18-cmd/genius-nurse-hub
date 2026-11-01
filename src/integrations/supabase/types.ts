@@ -276,30 +276,51 @@ export type Database = {
       }
       exam_answers: {
         Row: {
+          answer_changes: number
+          answered_at: string | null
+          attempt_number: number | null
+          confidence: string | null
           exam_id: string
+          first_answer: string | null
           flagged: boolean
           id: string
           is_correct: boolean | null
           position: number
           question_id: string
+          time_spent_ms: number | null
+          topic: string | null
           user_answer: string | null
         }
         Insert: {
+          answer_changes?: number
+          answered_at?: string | null
+          attempt_number?: number | null
+          confidence?: string | null
           exam_id: string
+          first_answer?: string | null
           flagged?: boolean
           id?: string
           is_correct?: boolean | null
           position: number
           question_id: string
+          time_spent_ms?: number | null
+          topic?: string | null
           user_answer?: string | null
         }
         Update: {
+          answer_changes?: number
+          answered_at?: string | null
+          attempt_number?: number | null
+          confidence?: string | null
           exam_id?: string
+          first_answer?: string | null
           flagged?: boolean
           id?: string
           is_correct?: boolean | null
           position?: number
           question_id?: string
+          time_spent_ms?: number | null
+          topic?: string | null
           user_answer?: string | null
         }
         Relationships: [
@@ -321,41 +342,59 @@ export type Database = {
       }
       exams: {
         Row: {
+          auto_submitted: boolean
           category: string
           completed_at: string | null
           correct_count: number | null
+          deadline_at: string
           exam_type: Database["public"]["Enums"]["exam_type"]
           id: string
           score_pct: number | null
+          session_type: string
           started_at: string
           status: string
+          submitted_at: string | null
           time_limit_minutes: number
+          time_spent_ms: number | null
+          topics: string[]
           total_questions: number
           user_id: string
         }
         Insert: {
+          auto_submitted?: boolean
           category?: string
           completed_at?: string | null
           correct_count?: number | null
+          deadline_at: string
           exam_type: Database["public"]["Enums"]["exam_type"]
           id?: string
           score_pct?: number | null
+          session_type?: string
           started_at?: string
           status?: string
+          submitted_at?: string | null
           time_limit_minutes: number
+          time_spent_ms?: number | null
+          topics?: string[]
           total_questions: number
           user_id: string
         }
         Update: {
+          auto_submitted?: boolean
           category?: string
           completed_at?: string | null
           correct_count?: number | null
+          deadline_at?: string
           exam_type?: Database["public"]["Enums"]["exam_type"]
           id?: string
           score_pct?: number | null
+          session_type?: string
           started_at?: string
           status?: string
+          submitted_at?: string | null
           time_limit_minutes?: number
+          time_spent_ms?: number | null
+          topics?: string[]
           total_questions?: number
           user_id?: string
         }
@@ -653,6 +692,77 @@ export type Database = {
         }
         Relationships: []
       }
+      user_question_stats: {
+        Row: {
+          attempts: number
+          correct: number
+          corrected_at: string | null
+          ease: number
+          interval_days: number
+          last_answer: string | null
+          last_attempt_at: string | null
+          last_correct_at: string | null
+          last_missed_at: string | null
+          last_reviewed_at: string | null
+          misses: number
+          next_review_at: string | null
+          question_id: string
+          review_count: number
+          review_status: string
+          unresolved: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          correct?: number
+          corrected_at?: string | null
+          ease?: number
+          interval_days?: number
+          last_answer?: string | null
+          last_attempt_at?: string | null
+          last_correct_at?: string | null
+          last_missed_at?: string | null
+          last_reviewed_at?: string | null
+          misses?: number
+          next_review_at?: string | null
+          question_id: string
+          review_count?: number
+          review_status?: string
+          unresolved?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          correct?: number
+          corrected_at?: string | null
+          ease?: number
+          interval_days?: number
+          last_answer?: string | null
+          last_attempt_at?: string | null
+          last_correct_at?: string | null
+          last_missed_at?: string | null
+          last_reviewed_at?: string | null
+          misses?: number
+          next_review_at?: string | null
+          question_id?: string
+          review_count?: number
+          review_status?: string
+          unresolved?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_question_stats_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -842,6 +952,19 @@ export type Database = {
         Returns: string
       }
       reset_user_to_novice: { Args: { _user_id: string }; Returns: undefined }
+      save_exam_answer: {
+        Args: {
+          _answer?: string
+          _confidence?: string
+          _exam_id: string
+          _flagged?: boolean
+          _grace_seconds: number
+          _question_id: string
+          _time_spent_ms?: number
+          _user_id: string
+        }
+        Returns: string
+      }
       start_custom_test_attempt: {
         Args: { _access_hash: string; _email: string; _token_hash: string }
         Returns: {
@@ -851,6 +974,19 @@ export type Database = {
           total_questions: number
         }[]
       }
+      start_exam_session: {
+        Args: {
+          _category: string
+          _exam_type: Database["public"]["Enums"]["exam_type"]
+          _question_ids: string[]
+          _session_type: string
+          _time_limit_minutes: number
+          _today: string
+          _topics: string[]
+          _user_id: string
+        }
+        Returns: string
+      }
       submit_custom_test_attempt: {
         Args: { _access_hash: string; _answers: Json; _attempt_id: string }
         Returns: {
@@ -858,6 +994,10 @@ export type Database = {
           score_pct: number
           total_questions: number
         }[]
+      }
+      submit_exam_session: {
+        Args: { _exam_id: string; _user_id: string }
+        Returns: Json
       }
     }
     Enums: {
