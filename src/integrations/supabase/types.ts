@@ -71,6 +71,38 @@ export type Database = {
         }
         Relationships: []
       }
+      bookmarks: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          question_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          question_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          question_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmarks_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_test_attempt_answers: {
         Row: {
           attempt_id: string
@@ -274,6 +306,47 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_challenges: {
+        Row: {
+          challenge_date: string
+          created_at: string
+          exam_id: string | null
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id: string
+          question_ids: string[]
+          started_at: string | null
+          user_id: string
+        }
+        Insert: {
+          challenge_date: string
+          created_at?: string
+          exam_id?: string | null
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id?: string
+          question_ids: string[]
+          started_at?: string | null
+          user_id: string
+        }
+        Update: {
+          challenge_date?: string
+          created_at?: string
+          exam_id?: string | null
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          id?: string
+          question_ids?: string[]
+          started_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_challenges_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_answers: {
         Row: {
           answer_changes: number
@@ -397,6 +470,33 @@ export type Database = {
           topics?: string[]
           total_questions?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_id: string
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_id?: string
+          responded_at?: string | null
+          status?: string
         }
         Relationships: []
       }
@@ -529,6 +629,53 @@ export type Database = {
         }
         Relationships: []
       }
+      question_reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          id: string
+          question_id: string
+          reason: string
+          reporter_id: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          question_id: string
+          reason: string
+          reporter_id: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          question_id?: string
+          reason?: string
+          reporter_id?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_reports_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       questions: {
         Row: {
           correct_answer: string
@@ -638,6 +785,45 @@ export type Database = {
           },
         ]
       }
+      study_plans: {
+        Row: {
+          created_at: string
+          daily_minutes: number
+          days_per_week: number
+          exam_date: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          plan: Json
+          questions_per_day: number
+          starts_on: string
+          target_score: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_minutes: number
+          days_per_week: number
+          exam_date: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          plan: Json
+          questions_per_day: number
+          starts_on: string
+          target_score: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_minutes?: number
+          days_per_week?: number
+          exam_date?: string
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          plan?: Json
+          questions_per_day?: number
+          starts_on?: string
+          target_score?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscription_payments: {
         Row: {
           amount_ngn: number
@@ -692,6 +878,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          code: string
+          unlocked_at: string
+          user_id: string
+          xp_awarded: number
+        }
+        Insert: {
+          code: string
+          unlocked_at?: string
+          user_id: string
+          xp_awarded?: number
+        }
+        Update: {
+          code?: string
+          unlocked_at?: string
+          user_id?: string
+          xp_awarded?: number
+        }
+        Relationships: []
+      }
       user_question_stats: {
         Row: {
           attempts: number
@@ -708,6 +915,7 @@ export type Database = {
           next_review_at: string | null
           question_id: string
           review_count: number
+          review_stale: boolean | null
           review_status: string
           unresolved: boolean | null
           updated_at: string
@@ -728,6 +936,7 @@ export type Database = {
           next_review_at?: string | null
           question_id: string
           review_count?: number
+          review_stale?: boolean | null
           review_status?: string
           unresolved?: boolean | null
           updated_at?: string
@@ -748,6 +957,7 @@ export type Database = {
           next_review_at?: string | null
           question_id?: string
           review_count?: number
+          review_stale?: boolean | null
           review_status?: string
           unresolved?: boolean | null
           updated_at?: string
@@ -784,6 +994,36 @@ export type Database = {
         }
         Relationships: []
       }
+      xp_events: {
+        Row: {
+          created_at: string
+          id: string
+          occurred_at: string
+          source_id: string
+          source_type: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          occurred_at?: string
+          source_id: string
+          source_type: string
+          user_id: string
+          xp: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          occurred_at?: string
+          source_id?: string
+          source_type?: string
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -812,6 +1052,10 @@ export type Database = {
           _exam_type: Database["public"]["Enums"]["exam_type"]
           _topic: string
         }
+        Returns: number
+      }
+      apply_review_states: {
+        Args: { _states: Json; _user_id: string }
         Returns: number
       }
       approve_receipt: { Args: { _receipt_id: string }; Returns: undefined }
@@ -845,6 +1089,15 @@ export type Database = {
       claim_custom_test_attempt: {
         Args: { _access_hash: string; _attempt_id: string }
         Returns: boolean
+      }
+      create_daily_challenge: {
+        Args: {
+          _date: string
+          _exam_type: Database["public"]["Enums"]["exam_type"]
+          _question_ids: string[]
+          _user_id: string
+        }
+        Returns: string
       }
       daily_reset: { Args: never; Returns: undefined }
       flag_receipt_and_revoke: {
@@ -895,6 +1148,20 @@ export type Database = {
           title: string
         }[]
       }
+      get_daily_challenge_view: {
+        Args: { _date: string; _user_id: string }
+        Returns: {
+          challenge_date: string
+          completed_at: string
+          correct_count: number
+          exam_id: string
+          exam_status: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id: string
+          score_pct: number
+          total_questions: number
+        }[]
+      }
       get_daily_leaderboard: {
         Args: never
         Returns: {
@@ -905,6 +1172,22 @@ export type Database = {
           username: string
         }[]
       }
+      get_engagement_snapshot: {
+        Args: {
+          _perfect_min_answered: number
+          _topic_min_attempts: number
+          _user_id: string
+        }
+        Returns: Json
+      }
+      get_question_difficulty_stats: {
+        Args: { _question_ids: string[] }
+        Returns: {
+          attempts: number
+          correct: number
+          question_id: string
+        }[]
+      }
       get_question_topic_counts: {
         Args: { _exam_type: Database["public"]["Enums"]["exam_type"] }
         Returns: {
@@ -912,11 +1195,59 @@ export type Database = {
           total: number
         }[]
       }
+      get_student_attempts: {
+        Args: {
+          _limit?: number
+          _question_ids?: string[]
+          _since?: string
+          _user_id: string
+        }
+        Returns: {
+          answered_at: string
+          confidence: string
+          correct: boolean
+          difficulty: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          question_id: string
+          session_id: string
+          session_type: string
+          time_spent_ms: number
+          topic: string
+        }[]
+      }
+      get_study_days: {
+        Args: { _since?: string; _user_id: string }
+        Returns: {
+          answered: number
+          study_day: string
+        }[]
+      }
       get_subadmin_user_directory: {
         Args: never
         Returns: {
           tier: Database["public"]["Enums"]["user_tier"]
           username: string
+        }[]
+      }
+      get_unawarded_sessions: {
+        Args: { _limit?: number; _user_id: string }
+        Returns: {
+          answered: number
+          completed_at: string
+          correct: number
+          exam_id: string
+          first_correct: number
+          session_type: string
+        }[]
+      }
+      get_unpaid_daily_challenges: {
+        Args: { _limit?: number; _user_id: string }
+        Returns: {
+          challenge_id: string
+          completed_at: string
+          correct_count: number
+          score_pct: number
+          total_questions: number
         }[]
       }
       get_weekly_leaderboard: {
@@ -930,6 +1261,7 @@ export type Database = {
           username: string
         }[]
       }
+      get_xp_total: { Args: { _user_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -938,6 +1270,19 @@ export type Database = {
         Returns: boolean
       }
       is_any_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_friendships: {
+        Args: {
+          _kind: string
+          _limit: number
+          _offset: number
+          _user_id: string
+        }
+        Returns: {
+          friendship_id: string
+          since: string
+          username: string
+        }[]
+      }
       record_receipt_fingerprint: {
         Args: {
           _extracted_text: string
@@ -946,12 +1291,41 @@ export type Database = {
         }
         Returns: boolean
       }
+      record_xp_events: {
+        Args: { _events: Json; _user_id: string }
+        Returns: number
+      }
       redeem_admin_code: { Args: { _code: string }; Returns: boolean }
+      remove_friendship: {
+        Args: { _friendship_id: string; _user_id: string }
+        Returns: undefined
+      }
       republish_custom_test: {
         Args: { _custom_test_id: string; _expires_at: string }
         Returns: string
       }
+      request_friend: {
+        Args: {
+          _max_friends: number
+          _max_pending: number
+          _user_id: string
+          _username: string
+        }
+        Returns: {
+          friendship_id: string
+          status: string
+        }[]
+      }
       reset_user_to_novice: { Args: { _user_id: string }; Returns: undefined }
+      respond_friend_request: {
+        Args: {
+          _accept: boolean
+          _friendship_id: string
+          _max_friends: number
+          _user_id: string
+        }
+        Returns: string
+      }
       save_exam_answer: {
         Args: {
           _answer?: string
@@ -961,6 +1335,15 @@ export type Database = {
           _grace_seconds: number
           _question_id: string
           _time_spent_ms?: number
+          _user_id: string
+        }
+        Returns: string
+      }
+      start_challenge_session: {
+        Args: {
+          _challenge_id: string
+          _time_limit_minutes: number
+          _today: string
           _user_id: string
         }
         Returns: string
@@ -998,6 +1381,10 @@ export type Database = {
       submit_exam_session: {
         Args: { _exam_id: string; _user_id: string }
         Returns: Json
+      }
+      unlock_achievements: {
+        Args: { _unlocks: Json; _user_id: string }
+        Returns: string[]
       }
     }
     Enums: {

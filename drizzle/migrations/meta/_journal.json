@@ -15,6 +15,55 @@
       "when": 1793551862842,
       "tag": "0001_exam_session_engine",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793641465621,
+      "tag": "0002_bookmarks_and_question_reports",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793641477194,
+      "tag": "0003_intelligence_support",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793641484589,
+      "tag": "0004_study_days",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793641499084,
+      "tag": "0005_gamification",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793641512034,
+      "tag": "0006_daily_challenges",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793641518200,
+      "tag": "0007_study_plans",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793641529627,
+      "tag": "0008_friends",
+      "breakpoints": true
     }
   ]
 }
