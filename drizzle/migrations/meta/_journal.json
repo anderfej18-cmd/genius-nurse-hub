@@ -57,6 +57,13 @@
       "when": 1793641518200,
       "tag": "0007_study_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793641529627,
+      "tag": "0008_friends",
+      "breakpoints": true
     }
   ]
 }

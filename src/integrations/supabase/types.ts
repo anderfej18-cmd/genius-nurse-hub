@@ -473,6 +473,33 @@ export type Database = {
         }
         Relationships: []
       }
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_id: string
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_id?: string
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       payment_receipts: {
         Row: {
           amount: number | null
@@ -1243,6 +1270,19 @@ export type Database = {
         Returns: boolean
       }
       is_any_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_friendships: {
+        Args: {
+          _kind: string
+          _limit: number
+          _offset: number
+          _user_id: string
+        }
+        Returns: {
+          friendship_id: string
+          since: string
+          username: string
+        }[]
+      }
       record_receipt_fingerprint: {
         Args: {
           _extracted_text: string
@@ -1256,11 +1296,36 @@ export type Database = {
         Returns: number
       }
       redeem_admin_code: { Args: { _code: string }; Returns: boolean }
+      remove_friendship: {
+        Args: { _friendship_id: string; _user_id: string }
+        Returns: undefined
+      }
       republish_custom_test: {
         Args: { _custom_test_id: string; _expires_at: string }
         Returns: string
       }
+      request_friend: {
+        Args: {
+          _max_friends: number
+          _max_pending: number
+          _user_id: string
+          _username: string
+        }
+        Returns: {
+          friendship_id: string
+          status: string
+        }[]
+      }
       reset_user_to_novice: { Args: { _user_id: string }; Returns: undefined }
+      respond_friend_request: {
+        Args: {
+          _accept: boolean
+          _friendship_id: string
+          _max_friends: number
+          _user_id: string
+        }
+        Returns: string
+      }
       save_exam_answer: {
         Args: {
           _answer?: string
