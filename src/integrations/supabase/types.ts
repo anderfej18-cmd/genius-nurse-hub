@@ -787,6 +787,7 @@ export type Database = {
           next_review_at: string | null
           question_id: string
           review_count: number
+          review_stale: boolean | null
           review_status: string
           unresolved: boolean | null
           updated_at: string
@@ -807,6 +808,7 @@ export type Database = {
           next_review_at?: string | null
           question_id: string
           review_count?: number
+          review_stale?: boolean | null
           review_status?: string
           unresolved?: boolean | null
           updated_at?: string
@@ -827,6 +829,7 @@ export type Database = {
           next_review_at?: string | null
           question_id?: string
           review_count?: number
+          review_stale?: boolean | null
           review_status?: string
           unresolved?: boolean | null
           updated_at?: string
@@ -891,6 +894,10 @@ export type Database = {
           _exam_type: Database["public"]["Enums"]["exam_type"]
           _topic: string
         }
+        Returns: number
+      }
+      apply_review_states: {
+        Args: { _states: Json; _user_id: string }
         Returns: number
       }
       approve_receipt: { Args: { _receipt_id: string }; Returns: undefined }
@@ -984,11 +991,39 @@ export type Database = {
           username: string
         }[]
       }
+      get_question_difficulty_stats: {
+        Args: { _question_ids: string[] }
+        Returns: {
+          attempts: number
+          correct: number
+          question_id: string
+        }[]
+      }
       get_question_topic_counts: {
         Args: { _exam_type: Database["public"]["Enums"]["exam_type"] }
         Returns: {
           topic: string
           total: number
+        }[]
+      }
+      get_student_attempts: {
+        Args: {
+          _limit?: number
+          _question_ids?: string[]
+          _since?: string
+          _user_id: string
+        }
+        Returns: {
+          answered_at: string
+          confidence: string
+          correct: boolean
+          difficulty: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          question_id: string
+          session_id: string
+          session_type: string
+          time_spent_ms: number
+          topic: string
         }[]
       }
       get_subadmin_user_directory: {
