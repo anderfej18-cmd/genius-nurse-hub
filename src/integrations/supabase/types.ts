@@ -1026,6 +1026,13 @@ export type Database = {
           topic: string
         }[]
       }
+      get_study_days: {
+        Args: { _since?: string; _user_id: string }
+        Returns: {
+          answered: number
+          study_day: string
+        }[]
+      }
       get_subadmin_user_directory: {
         Args: never
         Returns: {
