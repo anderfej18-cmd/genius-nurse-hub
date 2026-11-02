@@ -771,6 +771,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          code: string
+          unlocked_at: string
+          user_id: string
+          xp_awarded: number
+        }
+        Insert: {
+          code: string
+          unlocked_at?: string
+          user_id: string
+          xp_awarded?: number
+        }
+        Update: {
+          code?: string
+          unlocked_at?: string
+          user_id?: string
+          xp_awarded?: number
+        }
+        Relationships: []
+      }
       user_question_stats: {
         Row: {
           attempts: number
@@ -863,6 +884,36 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      xp_events: {
+        Row: {
+          created_at: string
+          id: string
+          occurred_at: string
+          source_id: string
+          source_type: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          occurred_at?: string
+          source_id: string
+          source_type: string
+          user_id: string
+          xp: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          occurred_at?: string
+          source_id?: string
+          source_type?: string
+          user_id?: string
+          xp?: number
         }
         Relationships: []
       }
@@ -991,6 +1042,14 @@ export type Database = {
           username: string
         }[]
       }
+      get_engagement_snapshot: {
+        Args: {
+          _perfect_min_answered: number
+          _topic_min_attempts: number
+          _user_id: string
+        }
+        Returns: Json
+      }
       get_question_difficulty_stats: {
         Args: { _question_ids: string[] }
         Returns: {
@@ -1040,6 +1099,17 @@ export type Database = {
           username: string
         }[]
       }
+      get_unawarded_sessions: {
+        Args: { _limit?: number; _user_id: string }
+        Returns: {
+          answered: number
+          completed_at: string
+          correct: number
+          exam_id: string
+          first_correct: number
+          session_type: string
+        }[]
+      }
       get_weekly_leaderboard: {
         Args: never
         Returns: {
@@ -1051,6 +1121,7 @@ export type Database = {
           username: string
         }[]
       }
+      get_xp_total: { Args: { _user_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1066,6 +1137,10 @@ export type Database = {
           _receipt_id: string
         }
         Returns: boolean
+      }
+      record_xp_events: {
+        Args: { _events: Json; _user_id: string }
+        Returns: number
       }
       redeem_admin_code: { Args: { _code: string }; Returns: boolean }
       republish_custom_test: {
@@ -1119,6 +1194,10 @@ export type Database = {
       submit_exam_session: {
         Args: { _exam_id: string; _user_id: string }
         Returns: Json
+      }
+      unlock_achievements: {
+        Args: { _unlocks: Json; _user_id: string }
+        Returns: string[]
       }
     }
     Enums: {
