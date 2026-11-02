@@ -758,6 +758,45 @@ export type Database = {
           },
         ]
       }
+      study_plans: {
+        Row: {
+          created_at: string
+          daily_minutes: number
+          days_per_week: number
+          exam_date: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          plan: Json
+          questions_per_day: number
+          starts_on: string
+          target_score: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_minutes: number
+          days_per_week: number
+          exam_date: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          plan: Json
+          questions_per_day: number
+          starts_on: string
+          target_score: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_minutes?: number
+          days_per_week?: number
+          exam_date?: string
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          plan?: Json
+          questions_per_day?: number
+          starts_on?: string
+          target_score?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscription_payments: {
         Row: {
           amount_ngn: number
