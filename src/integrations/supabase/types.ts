@@ -306,6 +306,47 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_challenges: {
+        Row: {
+          challenge_date: string
+          created_at: string
+          exam_id: string | null
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id: string
+          question_ids: string[]
+          started_at: string | null
+          user_id: string
+        }
+        Insert: {
+          challenge_date: string
+          created_at?: string
+          exam_id?: string | null
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id?: string
+          question_ids: string[]
+          started_at?: string | null
+          user_id: string
+        }
+        Update: {
+          challenge_date?: string
+          created_at?: string
+          exam_id?: string | null
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          id?: string
+          question_ids?: string[]
+          started_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_challenges_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_answers: {
         Row: {
           answer_changes: number
@@ -983,6 +1024,15 @@ export type Database = {
         Args: { _access_hash: string; _attempt_id: string }
         Returns: boolean
       }
+      create_daily_challenge: {
+        Args: {
+          _date: string
+          _exam_type: Database["public"]["Enums"]["exam_type"]
+          _question_ids: string[]
+          _user_id: string
+        }
+        Returns: string
+      }
       daily_reset: { Args: never; Returns: undefined }
       flag_receipt_and_revoke: {
         Args: { _reason: string; _receipt_id: string }
@@ -1030,6 +1080,20 @@ export type Database = {
           question_text: string
           test_id: string
           title: string
+        }[]
+      }
+      get_daily_challenge_view: {
+        Args: { _date: string; _user_id: string }
+        Returns: {
+          challenge_date: string
+          completed_at: string
+          correct_count: number
+          exam_id: string
+          exam_status: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id: string
+          score_pct: number
+          total_questions: number
         }[]
       }
       get_daily_leaderboard: {
@@ -1110,6 +1174,16 @@ export type Database = {
           session_type: string
         }[]
       }
+      get_unpaid_daily_challenges: {
+        Args: { _limit?: number; _user_id: string }
+        Returns: {
+          challenge_id: string
+          completed_at: string
+          correct_count: number
+          score_pct: number
+          total_questions: number
+        }[]
+      }
       get_weekly_leaderboard: {
         Args: never
         Returns: {
@@ -1157,6 +1231,15 @@ export type Database = {
           _grace_seconds: number
           _question_id: string
           _time_spent_ms?: number
+          _user_id: string
+        }
+        Returns: string
+      }
+      start_challenge_session: {
+        Args: {
+          _challenge_id: string
+          _time_limit_minutes: number
+          _today: string
           _user_id: string
         }
         Returns: string

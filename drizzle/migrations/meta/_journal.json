@@ -43,6 +43,13 @@
       "when": 1793641499084,
       "tag": "0005_gamification",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793641512034,
+      "tag": "0006_daily_challenges",
+      "breakpoints": true
     }
   ]
 }
