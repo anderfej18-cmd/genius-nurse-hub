@@ -473,6 +473,60 @@ export type Database = {
         }
         Relationships: []
       }
+      friend_challenges: {
+        Row: {
+          challenger_exam_id: string | null
+          challenger_id: string
+          created_at: string
+          declined_at: string | null
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          expires_at: string
+          id: string
+          opponent_exam_id: string | null
+          opponent_id: string
+          question_ids: string[]
+        }
+        Insert: {
+          challenger_exam_id?: string | null
+          challenger_id: string
+          created_at?: string
+          declined_at?: string | null
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          expires_at: string
+          id?: string
+          opponent_exam_id?: string | null
+          opponent_id: string
+          question_ids: string[]
+        }
+        Update: {
+          challenger_exam_id?: string | null
+          challenger_id?: string
+          created_at?: string
+          declined_at?: string | null
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          expires_at?: string
+          id?: string
+          opponent_exam_id?: string | null
+          opponent_id?: string
+          question_ids?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friend_challenges_challenger_exam_id_fkey"
+            columns: ["challenger_exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friend_challenges_opponent_exam_id_fkey"
+            columns: ["opponent_exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       friendships: {
         Row: {
           addressee_id: string
@@ -497,6 +551,69 @@ export type Database = {
           requester_id?: string
           responded_at?: string | null
           status?: string
+        }
+        Relationships: []
+      }
+      notification_outbox: {
+        Row: {
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          dispatched_at: string | null
+          id: string
+          kind: string
+          last_error: string | null
+          payload: Json
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          dispatched_at?: string | null
+          id?: string
+          kind: string
+          last_error?: string | null
+          payload: Json
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          dispatched_at?: string | null
+          id?: string
+          kind?: string
+          last_error?: string | null
+          payload?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          kind: string
+          payload: Json
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          read_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -1090,6 +1207,39 @@ export type Database = {
         Args: { _access_hash: string; _attempt_id: string }
         Returns: boolean
       }
+      claim_notifications: {
+        Args: {
+          _limit: number
+          _max_attempts: number
+          _stale_after_seconds: number
+          _user_id: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+        }[]
+      }
+      consume_rate_limit: {
+        Args: { _bucket: string; _limit: number; _window_seconds: number }
+        Returns: {
+          allowed: boolean
+          remaining: number
+          retry_after_seconds: number
+        }[]
+      }
+      count_unread_notifications: {
+        Args: { _user_id: string }
+        Returns: number
+      }
+      count_users_by_tier: {
+        Args: never
+        Returns: {
+          tier: Database["public"]["Enums"]["user_tier"]
+          total: number
+        }[]
+      }
       create_daily_challenge: {
         Args: {
           _date: string
@@ -1099,7 +1249,22 @@ export type Database = {
         }
         Returns: string
       }
+      create_friend_challenge: {
+        Args: {
+          _exam_type: Database["public"]["Enums"]["exam_type"]
+          _expires_at: string
+          _friendship_id: string
+          _max_open: number
+          _question_ids: string[]
+          _user_id: string
+        }
+        Returns: string
+      }
       daily_reset: { Args: never; Returns: undefined }
+      decline_friend_challenge: {
+        Args: { _challenge_id: string; _user_id: string }
+        Returns: undefined
+      }
       flag_receipt_and_revoke: {
         Args: { _reason: string; _receipt_id: string }
         Returns: undefined
@@ -1180,6 +1345,65 @@ export type Database = {
         }
         Returns: Json
       }
+      get_explainable_question: {
+        Args: { _exam_id: string; _question_id: string; _user_id: string }
+        Returns: {
+          correct_answer: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_text: string
+          rationale: string
+          topic: string
+          user_answer: string
+        }[]
+      }
+      get_explainable_shared_question: {
+        Args: {
+          _access_hash: string
+          _attempt_id: string
+          _question_id: string
+        }
+        Returns: {
+          correct_answer: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_text: string
+          rationale: string
+          topic: string
+          user_answer: string
+        }[]
+      }
+      get_friend_challenge_views: {
+        Args: {
+          _challenge_id?: string
+          _limit: number
+          _offset: number
+          _user_id: string
+        }
+        Returns: {
+          created_at: string
+          declined_at: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          expires_at: string
+          id: string
+          my_completed_at: string
+          my_correct: number
+          my_exam_id: string
+          my_exam_status: string
+          my_score_pct: number
+          opponent_username: string
+          role: string
+          their_completed_at: string
+          their_correct: number
+          their_exam_status: string
+          their_score_pct: number
+          total_questions: number
+        }[]
+      }
       get_question_difficulty_stats: {
         Args: { _question_ids: string[] }
         Returns: {
@@ -1220,13 +1444,6 @@ export type Database = {
         Returns: {
           answered: number
           study_day: string
-        }[]
-      }
-      get_subadmin_user_directory: {
-        Args: never
-        Returns: {
-          tier: Database["public"]["Enums"]["user_tier"]
-          username: string
         }[]
       }
       get_unawarded_sessions: {
@@ -1282,6 +1499,40 @@ export type Database = {
           since: string
           username: string
         }[]
+      }
+      list_notifications: {
+        Args: {
+          _limit: number
+          _offset: number
+          _unread_only: boolean
+          _user_id: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+          read_at: string
+        }[]
+      }
+      list_user_directory: {
+        Args: { _limit: number; _offset: number }
+        Returns: {
+          tier: Database["public"]["Enums"]["user_tier"]
+          username: string
+        }[]
+      }
+      mark_notifications_dispatched: {
+        Args: { _ids: string[] }
+        Returns: undefined
+      }
+      mark_notifications_read: {
+        Args: { _ids?: string[]; _user_id: string }
+        Returns: number
+      }
+      record_notification_failure: {
+        Args: { _error: string; _id: string }
+        Returns: undefined
       }
       record_receipt_fingerprint: {
         Args: {
@@ -1366,6 +1617,15 @@ export type Database = {
           _time_limit_minutes: number
           _today: string
           _topics: string[]
+          _user_id: string
+        }
+        Returns: string
+      }
+      start_friend_challenge_session: {
+        Args: {
+          _challenge_id: string
+          _time_limit_minutes: number
+          _today: string
           _user_id: string
         }
         Returns: string

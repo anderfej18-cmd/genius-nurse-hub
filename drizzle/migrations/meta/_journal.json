@@ -64,6 +64,41 @@
       "when": 1793641529627,
       "tag": "0008_friends",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793664954884,
+      "tag": "0009_friend_challenges",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793664972062,
+      "tag": "0010_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793664978946,
+      "tag": "0011_admin_content_management",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793664988194,
+      "tag": "0012_rate_limits_and_ai_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793664997001,
+      "tag": "0013_admin_access_and_directories",
+      "breakpoints": true
     }
   ]
 }
