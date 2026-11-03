@@ -554,6 +554,69 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_outbox: {
+        Row: {
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          dispatched_at: string | null
+          id: string
+          kind: string
+          last_error: string | null
+          payload: Json
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          dispatched_at?: string | null
+          id?: string
+          kind: string
+          last_error?: string | null
+          payload: Json
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          dispatched_at?: string | null
+          id?: string
+          kind?: string
+          last_error?: string | null
+          payload?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          kind: string
+          payload: Json
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       payment_receipts: {
         Row: {
           amount: number | null
@@ -1144,6 +1207,24 @@ export type Database = {
         Args: { _access_hash: string; _attempt_id: string }
         Returns: boolean
       }
+      claim_notifications: {
+        Args: {
+          _limit: number
+          _max_attempts: number
+          _stale_after_seconds: number
+          _user_id: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+        }[]
+      }
+      count_unread_notifications: {
+        Args: { _user_id: string }
+        Returns: number
+      }
       create_daily_challenge: {
         Args: {
           _date: string
@@ -1378,6 +1459,33 @@ export type Database = {
           since: string
           username: string
         }[]
+      }
+      list_notifications: {
+        Args: {
+          _limit: number
+          _offset: number
+          _unread_only: boolean
+          _user_id: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+          read_at: string
+        }[]
+      }
+      mark_notifications_dispatched: {
+        Args: { _ids: string[] }
+        Returns: undefined
+      }
+      mark_notifications_read: {
+        Args: { _ids?: string[]; _user_id: string }
+        Returns: number
+      }
+      record_notification_failure: {
+        Args: { _error: string; _id: string }
+        Returns: undefined
       }
       record_receipt_fingerprint: {
         Args: {
