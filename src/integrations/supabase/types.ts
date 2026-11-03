@@ -1233,6 +1233,13 @@ export type Database = {
         Args: { _user_id: string }
         Returns: number
       }
+      count_users_by_tier: {
+        Args: never
+        Returns: {
+          tier: Database["public"]["Enums"]["user_tier"]
+          total: number
+        }[]
+      }
       create_daily_challenge: {
         Args: {
           _date: string
@@ -1439,13 +1446,6 @@ export type Database = {
           study_day: string
         }[]
       }
-      get_subadmin_user_directory: {
-        Args: never
-        Returns: {
-          tier: Database["public"]["Enums"]["user_tier"]
-          username: string
-        }[]
-      }
       get_unawarded_sessions: {
         Args: { _limit?: number; _user_id: string }
         Returns: {
@@ -1513,6 +1513,13 @@ export type Database = {
           kind: string
           payload: Json
           read_at: string
+        }[]
+      }
+      list_user_directory: {
+        Args: { _limit: number; _offset: number }
+        Returns: {
+          tier: Database["public"]["Enums"]["user_tier"]
+          username: string
         }[]
       }
       mark_notifications_dispatched: {

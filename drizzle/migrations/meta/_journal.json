@@ -92,6 +92,13 @@
       "when": 1793664988194,
       "tag": "0012_rate_limits_and_ai_access",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793664997001,
+      "tag": "0013_admin_access_and_directories",
+      "breakpoints": true
     }
   ]
 }
