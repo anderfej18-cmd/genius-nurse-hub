@@ -1221,6 +1221,14 @@ export type Database = {
           payload: Json
         }[]
       }
+      consume_rate_limit: {
+        Args: { _bucket: string; _limit: number; _window_seconds: number }
+        Returns: {
+          allowed: boolean
+          remaining: number
+          retry_after_seconds: number
+        }[]
+      }
       count_unread_notifications: {
         Args: { _user_id: string }
         Returns: number
@@ -1329,6 +1337,38 @@ export type Database = {
           _user_id: string
         }
         Returns: Json
+      }
+      get_explainable_question: {
+        Args: { _exam_id: string; _question_id: string; _user_id: string }
+        Returns: {
+          correct_answer: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_text: string
+          rationale: string
+          topic: string
+          user_answer: string
+        }[]
+      }
+      get_explainable_shared_question: {
+        Args: {
+          _access_hash: string
+          _attempt_id: string
+          _question_id: string
+        }
+        Returns: {
+          correct_answer: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_text: string
+          rationale: string
+          topic: string
+          user_answer: string
+        }[]
       }
       get_friend_challenge_views: {
         Args: {
