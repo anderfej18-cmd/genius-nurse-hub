@@ -473,6 +473,60 @@ export type Database = {
         }
         Relationships: []
       }
+      friend_challenges: {
+        Row: {
+          challenger_exam_id: string | null
+          challenger_id: string
+          created_at: string
+          declined_at: string | null
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          expires_at: string
+          id: string
+          opponent_exam_id: string | null
+          opponent_id: string
+          question_ids: string[]
+        }
+        Insert: {
+          challenger_exam_id?: string | null
+          challenger_id: string
+          created_at?: string
+          declined_at?: string | null
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          expires_at: string
+          id?: string
+          opponent_exam_id?: string | null
+          opponent_id: string
+          question_ids: string[]
+        }
+        Update: {
+          challenger_exam_id?: string | null
+          challenger_id?: string
+          created_at?: string
+          declined_at?: string | null
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          expires_at?: string
+          id?: string
+          opponent_exam_id?: string | null
+          opponent_id?: string
+          question_ids?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friend_challenges_challenger_exam_id_fkey"
+            columns: ["challenger_exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friend_challenges_opponent_exam_id_fkey"
+            columns: ["opponent_exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       friendships: {
         Row: {
           addressee_id: string
@@ -1099,7 +1153,22 @@ export type Database = {
         }
         Returns: string
       }
+      create_friend_challenge: {
+        Args: {
+          _exam_type: Database["public"]["Enums"]["exam_type"]
+          _expires_at: string
+          _friendship_id: string
+          _max_open: number
+          _question_ids: string[]
+          _user_id: string
+        }
+        Returns: string
+      }
       daily_reset: { Args: never; Returns: undefined }
+      decline_friend_challenge: {
+        Args: { _challenge_id: string; _user_id: string }
+        Returns: undefined
+      }
       flag_receipt_and_revoke: {
         Args: { _reason: string; _receipt_id: string }
         Returns: undefined
@@ -1179,6 +1248,33 @@ export type Database = {
           _user_id: string
         }
         Returns: Json
+      }
+      get_friend_challenge_views: {
+        Args: {
+          _challenge_id?: string
+          _limit: number
+          _offset: number
+          _user_id: string
+        }
+        Returns: {
+          created_at: string
+          declined_at: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          expires_at: string
+          id: string
+          my_completed_at: string
+          my_correct: number
+          my_exam_id: string
+          my_exam_status: string
+          my_score_pct: number
+          opponent_username: string
+          role: string
+          their_completed_at: string
+          their_correct: number
+          their_exam_status: string
+          their_score_pct: number
+          total_questions: number
+        }[]
       }
       get_question_difficulty_stats: {
         Args: { _question_ids: string[] }
@@ -1366,6 +1462,15 @@ export type Database = {
           _time_limit_minutes: number
           _today: string
           _topics: string[]
+          _user_id: string
+        }
+        Returns: string
+      }
+      start_friend_challenge_session: {
+        Args: {
+          _challenge_id: string
+          _time_limit_minutes: number
+          _today: string
           _user_id: string
         }
         Returns: string

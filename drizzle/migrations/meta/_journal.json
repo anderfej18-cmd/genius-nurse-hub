@@ -64,6 +64,13 @@
       "when": 1793641529627,
       "tag": "0008_friends",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793664954884,
+      "tag": "0009_friend_challenges",
+      "breakpoints": true
     }
   ]
 }
