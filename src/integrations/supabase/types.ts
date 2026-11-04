@@ -38,6 +38,42 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_insights: {
+        Row: {
+          completion_tokens: number
+          facts_hash: string
+          generated_at: string
+          kind: string
+          model: string
+          narrative: Json
+          prompt_tokens: number
+          prompt_version: string
+          user_id: string
+        }
+        Insert: {
+          completion_tokens?: number
+          facts_hash: string
+          generated_at?: string
+          kind: string
+          model: string
+          narrative: Json
+          prompt_tokens?: number
+          prompt_version: string
+          user_id: string
+        }
+        Update: {
+          completion_tokens?: number
+          facts_hash?: string
+          generated_at?: string
+          kind?: string
+          model?: string
+          narrative?: Json
+          prompt_tokens?: number
+          prompt_version?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           erudite_daily_limit: number
@@ -873,6 +909,42 @@ export type Database = {
           },
         ]
       }
+      readiness_snapshots: {
+        Row: {
+          assessed_at: string
+          attempts: number
+          band: string
+          completeness: number
+          components: Json
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id: string
+          score: number | null
+          user_id: string
+        }
+        Insert: {
+          assessed_at?: string
+          attempts: number
+          band: string
+          completeness: number
+          components?: Json
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id?: string
+          score?: number | null
+          user_id: string
+        }
+        Update: {
+          assessed_at?: string
+          attempts?: number
+          band?: string
+          completeness?: number
+          components?: Json
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          id?: string
+          score?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       receipt_fingerprints: {
         Row: {
           created_at: string
@@ -1575,6 +1647,23 @@ export type Database = {
       record_notification_failure: {
         Args: { _error: string; _id: string }
         Returns: undefined
+      }
+      record_readiness_snapshot: {
+        Args: {
+          _attempts: number
+          _band: string
+          _completeness: number
+          _components: Json
+          _exam_type: Database["public"]["Enums"]["exam_type"]
+          _score?: number
+          _user_id: string
+        }
+        Returns: {
+          assessed_at: string
+          attempts: number
+          band: string
+          score: number
+        }[]
       }
       record_receipt_fingerprint: {
         Args: {
