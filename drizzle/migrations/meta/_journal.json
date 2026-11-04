@@ -127,6 +127,27 @@
       "when": 1793773515093,
       "tag": "0017_quota_enforcement",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793773551191,
+      "tag": "0018_ai_insights",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793773557731,
+      "tag": "0019_selection_reasons",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793773566969,
+      "tag": "0020_admin_privacy_and_question_audit",
+      "breakpoints": true
     }
   ]
 }

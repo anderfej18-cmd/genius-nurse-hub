@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          details: Json
+          id: number
+          target_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          details?: Json
+          id?: never
+          target_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          details?: Json
+          id?: never
+          target_id?: string | null
+        }
+        Relationships: []
+      }
       admin_codes: {
         Row: {
           code: string
@@ -35,6 +62,42 @@ export type Database = {
           id?: string
           used_at?: string | null
           used_by?: string | null
+        }
+        Relationships: []
+      }
+      ai_insights: {
+        Row: {
+          completion_tokens: number
+          facts_hash: string
+          generated_at: string
+          kind: string
+          model: string
+          narrative: Json
+          prompt_tokens: number
+          prompt_version: string
+          user_id: string
+        }
+        Insert: {
+          completion_tokens?: number
+          facts_hash: string
+          generated_at?: string
+          kind: string
+          model: string
+          narrative: Json
+          prompt_tokens?: number
+          prompt_version: string
+          user_id: string
+        }
+        Update: {
+          completion_tokens?: number
+          facts_hash?: string
+          generated_at?: string
+          kind?: string
+          model?: string
+          narrative?: Json
+          prompt_tokens?: number
+          prompt_version?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -361,6 +424,7 @@ export type Database = {
           is_correct: boolean | null
           position: number
           question_id: string
+          selection_reason: string | null
           time_spent_ms: number | null
           topic: string | null
           user_answer: string | null
@@ -378,6 +442,7 @@ export type Database = {
           is_correct?: boolean | null
           position: number
           question_id: string
+          selection_reason?: string | null
           time_spent_ms?: number | null
           topic?: string | null
           user_answer?: string | null
@@ -395,6 +460,7 @@ export type Database = {
           is_correct?: boolean | null
           position?: number
           question_id?: string
+          selection_reason?: string | null
           time_spent_ms?: number | null
           topic?: string | null
           user_answer?: string | null
@@ -873,6 +939,42 @@ export type Database = {
           },
         ]
       }
+      readiness_snapshots: {
+        Row: {
+          assessed_at: string
+          attempts: number
+          band: string
+          completeness: number
+          components: Json
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id: string
+          score: number | null
+          user_id: string
+        }
+        Insert: {
+          assessed_at?: string
+          attempts: number
+          band: string
+          completeness: number
+          components?: Json
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id?: string
+          score?: number | null
+          user_id: string
+        }
+        Update: {
+          assessed_at?: string
+          attempts?: number
+          band?: string
+          completeness?: number
+          components?: Json
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          id?: string
+          score?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       receipt_fingerprints: {
         Row: {
           created_at: string
@@ -1176,6 +1278,10 @@ export type Database = {
           _topic: string
         }
         Returns: number
+      }
+      admin_delete_question: {
+        Args: { _admin_id: string; _question_id: string }
+        Returns: undefined
       }
       apply_review_states: {
         Args: { _states: Json; _user_id: string }
@@ -1576,6 +1682,23 @@ export type Database = {
         Args: { _error: string; _id: string }
         Returns: undefined
       }
+      record_readiness_snapshot: {
+        Args: {
+          _attempts: number
+          _band: string
+          _completeness: number
+          _components: Json
+          _exam_type: Database["public"]["Enums"]["exam_type"]
+          _score?: number
+          _user_id: string
+        }
+        Returns: {
+          assessed_at: string
+          attempts: number
+          band: string
+          score: number
+        }[]
+      }
       record_receipt_fingerprint: {
         Args: {
           _extracted_text: string
@@ -1583,6 +1706,10 @@ export type Database = {
           _receipt_id: string
         }
         Returns: boolean
+      }
+      record_selection_reasons: {
+        Args: { _exam_id: string; _reasons: Json; _user_id: string }
+        Returns: number
       }
       record_xp_events: {
         Args: { _events: Json; _user_id: string }
