@@ -356,6 +356,7 @@ export type Database = {
           exam_id: string
           first_answer: string | null
           flagged: boolean
+          hints_used: number
           id: string
           is_correct: boolean | null
           position: number
@@ -372,6 +373,7 @@ export type Database = {
           exam_id: string
           first_answer?: string | null
           flagged?: boolean
+          hints_used?: number
           id?: string
           is_correct?: boolean | null
           position: number
@@ -388,6 +390,7 @@ export type Database = {
           exam_id?: string
           first_answer?: string | null
           flagged?: boolean
+          hints_used?: number
           id?: string
           is_correct?: boolean | null
           position?: number
@@ -1620,6 +1623,7 @@ export type Database = {
           _exam_id: string
           _flagged?: boolean
           _grace_seconds: number
+          _hint_used?: boolean
           _question_id: string
           _time_spent_ms?: number
           _user_id: string
