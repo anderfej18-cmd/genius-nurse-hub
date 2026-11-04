@@ -426,6 +426,7 @@ export type Database = {
           exam_type: Database["public"]["Enums"]["exam_type"]
           id: string
           score_pct: number | null
+          score_verified: boolean
           session_type: string
           started_at: string
           status: string
@@ -445,6 +446,7 @@ export type Database = {
           exam_type: Database["public"]["Enums"]["exam_type"]
           id?: string
           score_pct?: number | null
+          score_verified?: boolean
           session_type?: string
           started_at?: string
           status?: string
@@ -464,6 +466,7 @@ export type Database = {
           exam_type?: Database["public"]["Enums"]["exam_type"]
           id?: string
           score_pct?: number | null
+          score_verified?: boolean
           session_type?: string
           started_at?: string
           status?: string
