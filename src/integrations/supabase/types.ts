@@ -397,6 +397,7 @@ export type Database = {
           is_correct: boolean | null
           position: number
           question_id: string
+          selection_reason: string | null
           time_spent_ms: number | null
           topic: string | null
           user_answer: string | null
@@ -414,6 +415,7 @@ export type Database = {
           is_correct?: boolean | null
           position: number
           question_id: string
+          selection_reason?: string | null
           time_spent_ms?: number | null
           topic?: string | null
           user_answer?: string | null
@@ -431,6 +433,7 @@ export type Database = {
           is_correct?: boolean | null
           position?: number
           question_id?: string
+          selection_reason?: string | null
           time_spent_ms?: number | null
           topic?: string | null
           user_answer?: string | null
@@ -1672,6 +1675,10 @@ export type Database = {
           _receipt_id: string
         }
         Returns: boolean
+      }
+      record_selection_reasons: {
+        Args: { _exam_id: string; _reasons: Json; _user_id: string }
+        Returns: number
       }
       record_xp_events: {
         Args: { _events: Json; _user_id: string }

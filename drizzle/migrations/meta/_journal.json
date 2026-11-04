@@ -134,6 +134,13 @@
       "when": 1793773551191,
       "tag": "0018_ai_insights",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793773557731,
+      "tag": "0019_selection_reasons",
+      "breakpoints": true
     }
   ]
 }
