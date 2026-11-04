@@ -356,6 +356,7 @@ export type Database = {
           exam_id: string
           first_answer: string | null
           flagged: boolean
+          hints_used: number
           id: string
           is_correct: boolean | null
           position: number
@@ -372,6 +373,7 @@ export type Database = {
           exam_id: string
           first_answer?: string | null
           flagged?: boolean
+          hints_used?: number
           id?: string
           is_correct?: boolean | null
           position: number
@@ -388,6 +390,7 @@ export type Database = {
           exam_id?: string
           first_answer?: string | null
           flagged?: boolean
+          hints_used?: number
           id?: string
           is_correct?: boolean | null
           position?: number
@@ -423,6 +426,7 @@ export type Database = {
           exam_type: Database["public"]["Enums"]["exam_type"]
           id: string
           score_pct: number | null
+          score_verified: boolean
           session_type: string
           started_at: string
           status: string
@@ -442,6 +446,7 @@ export type Database = {
           exam_type: Database["public"]["Enums"]["exam_type"]
           id?: string
           score_pct?: number | null
+          score_verified?: boolean
           session_type?: string
           started_at?: string
           status?: string
@@ -461,6 +466,7 @@ export type Database = {
           exam_type?: Database["public"]["Enums"]["exam_type"]
           id?: string
           score_pct?: number | null
+          score_verified?: boolean
           session_type?: string
           started_at?: string
           status?: string
@@ -1240,6 +1246,20 @@ export type Database = {
           total: number
         }[]
       }
+      create_custom_test: {
+        Args: {
+          _description: string
+          _duration_minutes: number
+          _exam_type: Database["public"]["Enums"]["exam_type"]
+          _expires_at: string
+          _owner_id: string
+          _questions: Json
+          _source_mode: string
+          _title: string
+          _token_hash: string
+        }
+        Returns: string
+      }
       create_daily_challenge: {
         Args: {
           _date: string
@@ -1486,7 +1506,29 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_custom_test_to_bank: {
+        Args: { _admin_id: string; _test_id: string; _topic: string }
+        Returns: number
+      }
       is_any_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_custom_test_summaries: {
+        Args: { _owner_id: string }
+        Returns: {
+          average_score: number
+          created_at: string
+          description: string
+          duration_minutes: number
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          expires_at: string
+          id: string
+          participant_count: number
+          pass_count: number
+          question_count: number
+          source_mode: string
+          status: Database["public"]["Enums"]["custom_test_status"]
+          title: string
+        }[]
+      }
       list_friendships: {
         Args: {
           _kind: string
@@ -1584,6 +1626,7 @@ export type Database = {
           _exam_id: string
           _flagged?: boolean
           _grace_seconds: number
+          _hint_used?: boolean
           _question_id: string
           _time_spent_ms?: number
           _user_id: string
@@ -1640,6 +1683,10 @@ export type Database = {
       }
       submit_exam_session: {
         Args: { _exam_id: string; _user_id: string }
+        Returns: Json
+      }
+      submit_shared_attempt: {
+        Args: { _access_hash: string; _answers: Json; _attempt_id: string }
         Returns: Json
       }
       unlock_achievements: {
