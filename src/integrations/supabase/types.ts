@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          details: Json
+          id: number
+          target_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          details?: Json
+          id?: never
+          target_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          details?: Json
+          id?: never
+          target_id?: string | null
+        }
+        Relationships: []
+      }
       admin_codes: {
         Row: {
           code: string
@@ -1251,6 +1278,10 @@ export type Database = {
           _topic: string
         }
         Returns: number
+      }
+      admin_delete_question: {
+        Args: { _admin_id: string; _question_id: string }
+        Returns: undefined
       }
       apply_review_states: {
         Args: { _states: Json; _user_id: string }
