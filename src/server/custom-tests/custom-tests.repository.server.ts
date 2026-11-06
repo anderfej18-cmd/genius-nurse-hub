@@ -253,7 +253,7 @@ export class SupabaseCustomTestStore implements CustomTestStore {
       _attempt_id: input.attemptId,
       _access_hash: input.accessHash,
       _question_id: input.questionId,
-      _answer: input.answer ?? undefined,
+      _answer: input.answer ?? '',
       _flagged: input.flagged,
     });
     if (error) throw mapDbError(error);
