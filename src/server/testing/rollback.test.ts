@@ -52,7 +52,7 @@ beforeAll(async () => {
   before = await fingerprint(baseline);
   await baseline.pg.close();
 
-  db = await createTestDb();
+  db = await createTestDb({ upTo: "20261012100100" });
   await db.pg.exec(
     readFileSync(
       join(process.cwd(), "supabase", "rollback", "20261006_milestones_1_to_3_rollback.sql"),

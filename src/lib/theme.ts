@@ -38,6 +38,7 @@ export const THEMED_PATH_PREFIXES = [
   "/profile",
   "/payments",
   "/admin",
+  "/osce",
 ] as const;
 
 /** Read a stored value defensively: anything unexpected becomes the default. */

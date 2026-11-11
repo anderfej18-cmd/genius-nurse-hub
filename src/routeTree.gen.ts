@@ -25,6 +25,7 @@ import { Route as AppLeaderboardRouteImport } from './routes/_app/leaderboard'
 import { Route as AppMasteryRouteImport } from './routes/_app/mastery'
 import { Route as AppMistakesRouteImport } from './routes/_app/mistakes'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
+import { Route as AppOsceRouteImport } from './routes/_app/osce'
 import { Route as AppPaymentsRouteImport } from './routes/_app/payments'
 import { Route as AppPlanRouteImport } from './routes/_app/plan'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
@@ -33,9 +34,12 @@ import { Route as AppTopicsRouteImport } from './routes/_app/topics'
 import { Route as ExamExamIdRouteImport } from './routes/exam.$examId'
 import { Route as TestTokenRouteImport } from './routes/test.$token'
 import { Route as AppExamStartRouteImport } from './routes/_app/exam.start'
+import { Route as AppOsceProcedureIdRouteImport } from './routes/_app/osce.$procedureId'
 import { Route as ApiPublicPaystackVerifyRouteImport } from './routes/api/public/paystack-verify'
 import { Route as ExamExamIdIndexRouteImport } from './routes/exam.$examId.index'
 import { Route as AppExamExamIdResultsRouteImport } from './routes/_app/exam.$examId.results'
+import { Route as AppOsceResultsSessionIdRouteImport } from './routes/_app/osce.results.$sessionId'
+import { Route as AppOsceSessionSessionIdRouteImport } from './routes/_app/osce.session.$sessionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -116,6 +120,11 @@ const AppNotificationsRoute = AppNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => AppRoute,
 } as any)
+const AppOsceRoute = AppOsceRouteImport.update({
+  id: '/osce',
+  path: '/osce',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPaymentsRoute = AppPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
@@ -156,6 +165,11 @@ const AppExamStartRoute = AppExamStartRouteImport.update({
   path: '/exam/start',
   getParentRoute: () => AppRoute,
 } as any)
+const AppOsceProcedureIdRoute = AppOsceProcedureIdRouteImport.update({
+  id: '/$procedureId',
+  path: '/$procedureId',
+  getParentRoute: () => AppOsceRoute,
+} as any)
 const ApiPublicPaystackVerifyRoute = ApiPublicPaystackVerifyRouteImport.update({
   id: '/api/public/paystack-verify',
   path: '/api/public/paystack-verify',
@@ -170,6 +184,16 @@ const AppExamExamIdResultsRoute = AppExamExamIdResultsRouteImport.update({
   id: '/exam/$examId/results',
   path: '/exam/$examId/results',
   getParentRoute: () => AppRoute,
+} as any)
+const AppOsceResultsSessionIdRoute = AppOsceResultsSessionIdRouteImport.update({
+  id: '/results/$sessionId',
+  path: '/results/$sessionId',
+  getParentRoute: () => AppOsceRoute,
+} as any)
+const AppOsceSessionSessionIdRoute = AppOsceSessionSessionIdRouteImport.update({
+  id: '/session/$sessionId',
+  path: '/session/$sessionId',
+  getParentRoute: () => AppOsceRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -188,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/mastery': typeof AppMasteryRoute
   '/mistakes': typeof AppMistakesRoute
   '/notifications': typeof AppNotificationsRoute
+  '/osce': typeof AppOsceRouteWithChildren
   '/payments': typeof AppPaymentsRoute
   '/plan': typeof AppPlanRoute
   '/profile': typeof AppProfileRoute
@@ -196,9 +221,12 @@ export interface FileRoutesByFullPath {
   '/exam/$examId': typeof ExamExamIdRouteWithChildren
   '/test/$token': typeof TestTokenRoute
   '/exam/start': typeof AppExamStartRoute
+  '/osce/$procedureId': typeof AppOsceProcedureIdRoute
   '/api/public/paystack-verify': typeof ApiPublicPaystackVerifyRoute
   '/exam/$examId/': typeof ExamExamIdIndexRoute
   '/exam/$examId/results': typeof AppExamExamIdResultsRoute
+  '/osce/results/$sessionId': typeof AppOsceResultsSessionIdRoute
+  '/osce/session/$sessionId': typeof AppOsceSessionSessionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -216,6 +244,7 @@ export interface FileRoutesByTo {
   '/mastery': typeof AppMasteryRoute
   '/mistakes': typeof AppMistakesRoute
   '/notifications': typeof AppNotificationsRoute
+  '/osce': typeof AppOsceRouteWithChildren
   '/payments': typeof AppPaymentsRoute
   '/plan': typeof AppPlanRoute
   '/profile': typeof AppProfileRoute
@@ -223,9 +252,12 @@ export interface FileRoutesByTo {
   '/topics': typeof AppTopicsRoute
   '/test/$token': typeof TestTokenRoute
   '/exam/start': typeof AppExamStartRoute
+  '/osce/$procedureId': typeof AppOsceProcedureIdRoute
   '/api/public/paystack-verify': typeof ApiPublicPaystackVerifyRoute
   '/exam/$examId': typeof ExamExamIdIndexRoute
   '/exam/$examId/results': typeof AppExamExamIdResultsRoute
+  '/osce/results/$sessionId': typeof AppOsceResultsSessionIdRoute
+  '/osce/session/$sessionId': typeof AppOsceSessionSessionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -245,6 +277,7 @@ export interface FileRoutesById {
   '/_app/mastery': typeof AppMasteryRoute
   '/_app/mistakes': typeof AppMistakesRoute
   '/_app/notifications': typeof AppNotificationsRoute
+  '/_app/osce': typeof AppOsceRouteWithChildren
   '/_app/payments': typeof AppPaymentsRoute
   '/_app/plan': typeof AppPlanRoute
   '/_app/profile': typeof AppProfileRoute
@@ -253,9 +286,12 @@ export interface FileRoutesById {
   '/exam/$examId': typeof ExamExamIdRouteWithChildren
   '/test/$token': typeof TestTokenRoute
   '/_app/exam/start': typeof AppExamStartRoute
+  '/_app/osce/$procedureId': typeof AppOsceProcedureIdRoute
   '/api/public/paystack-verify': typeof ApiPublicPaystackVerifyRoute
   '/exam/$examId/': typeof ExamExamIdIndexRoute
   '/_app/exam/$examId/results': typeof AppExamExamIdResultsRoute
+  '/_app/osce/results/$sessionId': typeof AppOsceResultsSessionIdRoute
+  '/_app/osce/session/$sessionId': typeof AppOsceSessionSessionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -275,6 +311,7 @@ export interface FileRouteTypes {
     | '/mastery'
     | '/mistakes'
     | '/notifications'
+    | '/osce'
     | '/payments'
     | '/plan'
     | '/profile'
@@ -283,9 +320,12 @@ export interface FileRouteTypes {
     | '/exam/$examId'
     | '/test/$token'
     | '/exam/start'
+    | '/osce/$procedureId'
     | '/api/public/paystack-verify'
     | '/exam/$examId/'
     | '/exam/$examId/results'
+    | '/osce/results/$sessionId'
+    | '/osce/session/$sessionId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -303,6 +343,7 @@ export interface FileRouteTypes {
     | '/mastery'
     | '/mistakes'
     | '/notifications'
+    | '/osce'
     | '/payments'
     | '/plan'
     | '/profile'
@@ -310,9 +351,12 @@ export interface FileRouteTypes {
     | '/topics'
     | '/test/$token'
     | '/exam/start'
+    | '/osce/$procedureId'
     | '/api/public/paystack-verify'
     | '/exam/$examId'
     | '/exam/$examId/results'
+    | '/osce/results/$sessionId'
+    | '/osce/session/$sessionId'
   id:
     | '__root__'
     | '/'
@@ -331,6 +375,7 @@ export interface FileRouteTypes {
     | '/_app/mastery'
     | '/_app/mistakes'
     | '/_app/notifications'
+    | '/_app/osce'
     | '/_app/payments'
     | '/_app/plan'
     | '/_app/profile'
@@ -339,9 +384,12 @@ export interface FileRouteTypes {
     | '/exam/$examId'
     | '/test/$token'
     | '/_app/exam/start'
+    | '/_app/osce/$procedureId'
     | '/api/public/paystack-verify'
     | '/exam/$examId/'
     | '/_app/exam/$examId/results'
+    | '/_app/osce/results/$sessionId'
+    | '/_app/osce/session/$sessionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -469,6 +517,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppNotificationsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/osce': {
+      id: '/_app/osce'
+      path: '/osce'
+      fullPath: '/osce'
+      preLoaderRoute: typeof AppOsceRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/payments': {
       id: '/_app/payments'
       path: '/payments'
@@ -525,6 +580,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppExamStartRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/osce/$procedureId': {
+      id: '/_app/osce/$procedureId'
+      path: '/$procedureId'
+      fullPath: '/osce/$procedureId'
+      preLoaderRoute: typeof AppOsceProcedureIdRouteImport
+      parentRoute: typeof AppOsceRoute
+    }
     '/api/public/paystack-verify': {
       id: '/api/public/paystack-verify'
       path: '/api/public/paystack-verify'
@@ -546,8 +608,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppExamExamIdResultsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/osce/results/$sessionId': {
+      id: '/_app/osce/results/$sessionId'
+      path: '/results/$sessionId'
+      fullPath: '/osce/results/$sessionId'
+      preLoaderRoute: typeof AppOsceResultsSessionIdRouteImport
+      parentRoute: typeof AppOsceRoute
+    }
+    '/_app/osce/session/$sessionId': {
+      id: '/_app/osce/session/$sessionId'
+      path: '/session/$sessionId'
+      fullPath: '/osce/session/$sessionId'
+      preLoaderRoute: typeof AppOsceSessionSessionIdRouteImport
+      parentRoute: typeof AppOsceRoute
+    }
   }
 }
+
+interface AppOsceRouteChildren {
+  AppOsceProcedureIdRoute: typeof AppOsceProcedureIdRoute
+  AppOsceResultsSessionIdRoute: typeof AppOsceResultsSessionIdRoute
+  AppOsceSessionSessionIdRoute: typeof AppOsceSessionSessionIdRoute
+}
+
+const AppOsceRouteChildren: AppOsceRouteChildren = {
+  AppOsceProcedureIdRoute: AppOsceProcedureIdRoute,
+  AppOsceResultsSessionIdRoute: AppOsceResultsSessionIdRoute,
+  AppOsceSessionSessionIdRoute: AppOsceSessionSessionIdRoute,
+}
+
+const AppOsceRouteWithChildren =
+  AppOsceRoute._addFileChildren(AppOsceRouteChildren)
 
 interface AppRouteChildren {
   AppAchievementsRoute: typeof AppAchievementsRoute
@@ -561,6 +652,7 @@ interface AppRouteChildren {
   AppMasteryRoute: typeof AppMasteryRoute
   AppMistakesRoute: typeof AppMistakesRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
+  AppOsceRoute: typeof AppOsceRouteWithChildren
   AppPaymentsRoute: typeof AppPaymentsRoute
   AppPlanRoute: typeof AppPlanRoute
   AppProfileRoute: typeof AppProfileRoute
@@ -582,6 +674,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMasteryRoute: AppMasteryRoute,
   AppMistakesRoute: AppMistakesRoute,
   AppNotificationsRoute: AppNotificationsRoute,
+  AppOsceRoute: AppOsceRouteWithChildren,
   AppPaymentsRoute: AppPaymentsRoute,
   AppPlanRoute: AppPlanRoute,
   AppProfileRoute: AppProfileRoute,

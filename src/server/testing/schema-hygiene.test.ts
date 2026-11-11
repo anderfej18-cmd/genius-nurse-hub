@@ -9,7 +9,9 @@ import { createTestDb, type TestDb } from "./pglite-db";
 // so a table that forgets to revoke is open; the test database copies that default on purpose.
 
 const MIGRATIONS_DIR = join(process.cwd(), "supabase", "migrations");
-const files = readdirSync(MIGRATIONS_DIR).filter((name) => name.endsWith(".sql"));
+const files = readdirSync(MIGRATIONS_DIR)
+  .filter((name) => name.endsWith(".sql"))
+  .sort();
 
 describe("migration files", () => {
   it("are named with a 14-digit timestamp and a description", () => {

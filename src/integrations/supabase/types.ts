@@ -1258,6 +1258,315 @@ export type Database = {
         }
         Relationships: []
       }
+      osce_categories: {
+        Row: {
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          icon?: string
+          id: string
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      osce_procedures: {
+        Row: {
+          assessment_mode: "oral" | "practical" | "both"
+          category_id: string
+          created_at: string
+          equipment_list: Json
+          examining_body: string
+          id: string
+          instructions: string
+          is_published: boolean
+          page_end: number
+          page_start: number
+          pass_mark: number
+          scenario_prompt: string
+          session_label: string
+          slug: string
+          station_number: string
+          time_limit_seconds: number
+          title: string
+          total_marks: number
+        }
+        Insert: {
+          assessment_mode: "oral" | "practical" | "both"
+          category_id: string
+          created_at?: string
+          equipment_list?: Json
+          examining_body: string
+          id?: string
+          instructions: string
+          is_published?: boolean
+          page_end: number
+          page_start: number
+          pass_mark: number
+          scenario_prompt: string
+          session_label: string
+          slug: string
+          station_number: string
+          time_limit_seconds?: number
+          title: string
+          total_marks: number
+        }
+        Update: {
+          assessment_mode?: "oral" | "practical" | "both"
+          category_id?: string
+          created_at?: string
+          equipment_list?: Json
+          examining_body?: string
+          id?: string
+          instructions?: string
+          is_published?: boolean
+          page_end?: number
+          page_start?: number
+          pass_mark?: number
+          scenario_prompt?: string
+          session_label?: string
+          slug?: string
+          station_number?: string
+          time_limit_seconds?: number
+          title?: string
+          total_marks?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "osce_procedures_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "osce_categories"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      osce_checklists: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          procedure_id: string
+          total_items: number
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          procedure_id: string
+          total_items?: number
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          procedure_id?: string
+          total_items?: number
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "osce_checklists_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "osce_procedures"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      osce_checklist_items: {
+        Row: {
+          allocated_marks: number
+          assessment_mode: "oral" | "practical" | "both"
+          checklist_id: string
+          clinical_synonyms: Json
+          created_at: string
+          description: string
+          id: string
+          is_critical: boolean
+          section: string
+          step_order: number
+          verification_criteria: string
+        }
+        Insert: {
+          allocated_marks: number
+          assessment_mode: "oral" | "practical" | "both"
+          checklist_id: string
+          clinical_synonyms?: Json
+          created_at?: string
+          description: string
+          id?: string
+          is_critical?: boolean
+          section: string
+          step_order: number
+          verification_criteria?: string
+        }
+        Update: {
+          allocated_marks?: number
+          assessment_mode?: "oral" | "practical" | "both"
+          checklist_id?: string
+          clinical_synonyms?: Json
+          created_at?: string
+          description?: string
+          id?: string
+          is_critical?: boolean
+          section?: string
+          step_order?: number
+          verification_criteria?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "osce_checklist_items_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "osce_checklists"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      osce_sessions: {
+        Row: {
+          clinical_feedback: Json | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          mode: "oral" | "practical"
+          percentage: number
+          procedure_id: string
+          checklist_id: string
+          score_obtained: number
+          started_at: string
+          status: "in_progress" | "completed" | "abandoned"
+          time_spent_seconds: number
+          total_possible: number
+          transcript: Json
+          user_id: string
+        }
+        Insert: {
+          clinical_feedback?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          mode: "oral" | "practical"
+          percentage?: number
+          procedure_id: string
+          checklist_id: string
+          score_obtained?: number
+          started_at?: string
+          status?: "in_progress" | "completed" | "abandoned"
+          time_spent_seconds?: number
+          total_possible?: number
+          transcript?: Json
+          user_id: string
+        }
+        Update: {
+          clinical_feedback?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          mode?: "oral" | "practical"
+          percentage?: number
+          procedure_id?: string
+          checklist_id?: string
+          score_obtained?: number
+          started_at?: string
+          status?: "in_progress" | "completed" | "abandoned"
+          time_spent_seconds?: number
+          total_possible?: number
+          transcript?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "osce_sessions_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "osce_checklists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "osce_sessions_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "osce_procedures"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      osce_session_evaluations: {
+        Row: {
+          confidence: number
+          evaluated_at: string
+          evidence_type: "verbal" | "physical" | "examiner_override"
+          id: string
+          item_id: string
+          marks_awarded: number
+          matched_text: string | null
+          session_id: string
+          status: "awarded" | "missed" | "partially_awarded"
+          timestamp_seconds: number
+        }
+        Insert: {
+          confidence?: number
+          evaluated_at?: string
+          evidence_type: "verbal" | "physical" | "examiner_override"
+          id?: string
+          item_id: string
+          marks_awarded?: number
+          matched_text?: string | null
+          session_id: string
+          status: "awarded" | "missed" | "partially_awarded"
+          timestamp_seconds?: number
+        }
+        Update: {
+          confidence?: number
+          evaluated_at?: string
+          evidence_type?: "verbal" | "physical" | "examiner_override"
+          id?: string
+          item_id?: string
+          marks_awarded?: number
+          matched_text?: string | null
+          session_id?: string
+          status?: "awarded" | "missed" | "partially_awarded"
+          timestamp_seconds?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "osce_session_evaluations_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "osce_checklist_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "osce_session_evaluations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "osce_sessions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

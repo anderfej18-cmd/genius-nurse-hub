@@ -29,7 +29,8 @@ export type StudentPath =
   | "/leaderboard"
   | "/notifications"
   | "/profile"
-  | "/payments";
+  | "/payments"
+  | "/osce";
 
 // ---- Admin tabs ----
 
@@ -191,6 +192,14 @@ const STUDENT_GROUPS: ReadonlyArray<{
         primary: true,
         alsoActiveOn: [/^\/exam\/[^/]+$/],
         notActiveOn: [/^\/exam\/[^/]+\/results$/],
+      },
+      {
+        id: "osce",
+        label: "OSCE Practice",
+        description:
+          "AI-assisted clinical procedures: voice matching, practical checklists, and examiner marking.",
+        to: "/osce",
+        alsoActiveOn: [/^\/osce(\/.*)?$/],
       },
       {
         id: "topics",
