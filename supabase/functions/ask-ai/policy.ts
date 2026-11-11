@@ -15,11 +15,14 @@ export const AI_CONFIG = {
   },
 } as const;
 
-const DEFAULT_ORIGINS = [
+export const DEFAULT_ORIGINS = [
   "https://*.lovable.app",
   "https://*.lovableproject.com",
   "http://localhost:8080",
   "http://localhost:5173",
+  "http://localhost:3000",
+  "http://localhost:*",
+  "http://127.0.0.1:*",
 ] as const;
 
 const id = z.string().uuid();
@@ -82,7 +85,7 @@ export function parseAllowedOrigins(configured: string | undefined): readonly st
     .split(",")
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
-  return entries.length > 0 ? entries : DEFAULT_ORIGINS;
+  return Array.from(new Set([...DEFAULT_ORIGINS, ...entries]));
 }
 
 export function isOriginAllowed(origin: string | null, allowed: readonly string[]): boolean {

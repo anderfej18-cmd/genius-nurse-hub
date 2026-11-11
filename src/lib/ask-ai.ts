@@ -52,16 +52,29 @@ export async function requestExplanation(target: ExplanationTarget): Promise<str
   return typeof explanation === "string" && explanation.length > 0 ? explanation : FALLBACK;
 }
 
-async function messageFrom(error: unknown): Promise<string> {
-  const response = (error as { context?: unknown }).context;
-  if (response instanceof Response) {
+export async function messageFrom(error: unknown): Promise<string> {
+  const context = (error as { context?: unknown })?.context;
+  if (context instanceof Response) {
     try {
-      const body: unknown = await response.json();
-      const message = (body as { error?: unknown }).error;
+      const body: unknown = await context.json();
+      const message = (body as { error?: unknown })?.error;
       if (typeof message === "string" && message.length > 0) return message;
     } catch {
-      // not JSON: fall through to the generic message
+      // not JSON: check HTTP status code directly
     }
+
+    if (context.status === 401) return "Sign in to continue.";
+    if (context.status === 403) return "Access not allowed from this origin or domain.";
+    if (context.status === 404) return "Explanations are only available after completing the exam.";
+    if (context.status === 429) return "Too many requests. Please wait and try again.";
+    if (context.status === 502) return "The AI tutor could not answer. Please try again.";
+    if (context.status === 503) return "The AI tutor is unavailable right now.";
   }
+
+  const errorMessage = (error as Error)?.message ?? "";
+  if (/fetch|network|failed to send/i.test(errorMessage)) {
+    return "Unable to connect to the AI service. Please check your internet connection or domain configuration.";
+  }
+
   return FALLBACK;
 }

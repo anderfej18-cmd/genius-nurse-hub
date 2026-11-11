@@ -91,15 +91,17 @@ describe("origins", () => {
     expect(isOriginAllowed(origin, allowed)).toBe(false);
   });
 
-  it("uses the configured list instead of the defaults, with exact and one-label wildcard entries", () => {
+  it("merges the configured list with default origins, supporting exact and one-label wildcard entries", () => {
     const configured = parseAllowedOrigins(
       " https://app.example.com , https://*.staging.example.com ,, ",
     );
     expect(isOriginAllowed("https://app.example.com", configured)).toBe(true);
     expect(isOriginAllowed("https://pr-4.staging.example.com", configured)).toBe(true);
     expect(isOriginAllowed("https://a.b.staging.example.com", configured)).toBe(false);
-    expect(isOriginAllowed("https://x.lovable.app", configured)).toBe(false);
+    expect(isOriginAllowed("https://x.lovable.app", configured)).toBe(true);
+    expect(isOriginAllowed("http://localhost:5173", configured)).toBe(true);
     expect(isOriginAllowed("https://app.example.com.evil.example", configured)).toBe(false);
+    expect(isOriginAllowed("https://evil.example", configured)).toBe(false);
   });
 
   it("treats a request with no Origin header (not a browser) as allowed", () => {

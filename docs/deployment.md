@@ -70,8 +70,10 @@ pages until they reload.
 
 ## 3. Edge Function `ask-ai`
 
-1. Set the secret `ALLOWED_ORIGINS` to the exact origins of your site, comma-separated (for example
-   `https://app.example.com`). The function refuses to start without it. Keep `LOVABLE_API_KEY` as it is.
+1. If your site is served from a custom domain outside Lovable and localhost, add it to the secret
+   `ALLOWED_ORIGINS` (comma-separated, for example `https://app.example.com`). Built-in defaults automatically
+   include local development (`localhost:*`, `127.0.0.1:*`) and Lovable hosting (`*.lovable.app`, `*.lovableproject.com`).
+   Optionally set `AI_MODEL` to override the default AI gateway model. Keep `LOVABLE_API_KEY` as it is.
 2. Deploy the function from `supabase/functions/ask-ai/` (it needs `policy.ts`, `handler.ts`, `index.ts`
    and `deno.json`). `supabase/config.toml` sets `verify_jwt = true`; confirm the setting is in effect on
    the deployed function. `verify_jwt` alone is not the access control: the function checks the caller

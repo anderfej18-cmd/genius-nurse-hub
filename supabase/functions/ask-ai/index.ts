@@ -83,7 +83,7 @@ async function callGateway(prompt: Prompt): Promise<string> {
       method: "POST",
       headers: { Authorization: `Bearer ${gatewayKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: AI_CONFIG.model,
+        model: Deno.env.get("AI_MODEL") ?? AI_CONFIG.model,
         max_tokens: AI_CONFIG.maxOutputTokens,
         messages: [
           { role: "system", content: prompt.system },
