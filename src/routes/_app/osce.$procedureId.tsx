@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   FileText,
   Wrench,
+  AlertCircle,
 } from "lucide-react";
 import { SignedInPage } from "@/components/SignedInPage";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,7 @@ function OsceProcedureDetailPage() {
   const navigate = useNavigate();
   const [selectedMode, setSelectedMode] = useState<SessionMode>("oral");
   const [isStarting, setIsStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
   const procedureQuery = useServerData(
     () => getOsceProcedureDetail({ data: { identifier: procedureId } }),
@@ -53,6 +55,7 @@ function OsceProcedureDetailPage() {
   const handleStart = async () => {
     if (!procedure || isStarting) return;
     setIsStarting(true);
+    setStartError(null);
     try {
       const session = await startOsceSession({
         data: { procedureId: procedure.id, mode: selectedMode },
@@ -61,7 +64,10 @@ function OsceProcedureDetailPage() {
         to: "/osce/session/$sessionId",
         params: { sessionId: session.id },
       });
-    } catch {
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Unable to start the station. Please try again.";
+      setStartError(message);
       setIsStarting(false);
     }
   };
@@ -291,6 +297,14 @@ function OsceProcedureDetailPage() {
                       </p>
                     </button>
                   </div>
+
+                  {/* Start Error */}
+                  {startError && (
+                    <div className="flex items-start gap-2 rounded-xl bg-destructive/10 border border-destructive/30 p-3">
+                      <AlertCircle className="size-4 text-destructive flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-destructive">{startError}</p>
+                    </div>
+                  )}
 
                   <Button
                     onClick={handleStart}

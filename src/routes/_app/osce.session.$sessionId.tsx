@@ -98,6 +98,11 @@ function useSpeechRecognition(onResult: (text: string) => void) {
   const [isSupported, setIsSupported] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  // Track listening state in a ref so the onend callback always reads the current value
+  // without depending on a stale closure — avoids recreating the recognition instance on every toggle.
+  const isListeningRef = useRef(false);
+  const onResultRef = useRef(onResult);
+  onResultRef.current = onResult;
 
   useEffect(() => {
     const SpeechRecognitionAPI = (typeof window !== "undefined" &&
@@ -106,67 +111,73 @@ function useSpeechRecognition(onResult: (text: string) => void) {
       | (new () => SpeechRecognitionInstance)
       | undefined;
 
-    if (SpeechRecognitionAPI) {
-      setIsSupported(true);
-      const recognition = new SpeechRecognitionAPI();
-      recognition.continuous = true;
-      recognition.interimResults = false;
-      recognition.lang = "en-NG";
+    if (!SpeechRecognitionAPI) return;
 
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            const transcript = event.results[i][0].transcript.trim();
-            if (transcript) onResult(transcript);
-          }
-        }
-      };
+    setIsSupported(true);
+    const recognition = new SpeechRecognitionAPI();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = "en-NG";
 
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-          setIsListening(false);
-          setSpeechError(
-            "Microphone permission was denied. Please allow microphone access in your browser to speak.",
-          );
-        } else if (event.error === "network") {
-          setIsListening(false);
-          setSpeechError(
-            "Speech recognition requires an active internet connection. Please verify your network connection.",
-          );
-        } else if (event.error !== "aborted" && event.error !== "no-speech") {
-          console.error("Speech recognition error:", event.error);
-        }
-      };
-
-      recognition.onend = () => {
-        if (recognitionRef.current && isListening) {
-          try {
-            recognitionRef.current.start();
-          } catch {
-            // Already started
-          }
-        }
-      };
-
-      recognitionRef.current = recognition;
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {
-          // Not started
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          const transcript = event.results[i][0].transcript.trim();
+          if (transcript) onResultRef.current(transcript);
         }
       }
     };
-  }, [onResult, isListening]);
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        isListeningRef.current = false;
+        setIsListening(false);
+        setSpeechError(
+          "Microphone permission was denied. Please allow microphone access in your browser to speak.",
+        );
+      } else if (event.error === "network") {
+        isListeningRef.current = false;
+        setIsListening(false);
+        setSpeechError(
+          "Speech recognition requires an active internet connection. Please verify your network connection.",
+        );
+      } else if (event.error !== "aborted" && event.error !== "no-speech") {
+        console.error("Speech recognition error:", event.error);
+      }
+    };
+
+    recognition.onend = () => {
+      // Auto-restart only while still in listening mode (checked via ref, not stale closure).
+      if (recognitionRef.current && isListeningRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch {
+          // Already started — ignore.
+        }
+      }
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      try {
+        recognition.stop();
+      } catch {
+        // Not started — ignore.
+      }
+    };
+    // This effect runs once per mount. onResult updates are handled via onResultRef.
+    // isListening is tracked via isListeningRef, NOT as an effect dependency, to avoid
+    // tearing down and recreating the SpeechRecognition instance on every toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const start = useCallback(() => {
     setSpeechError(null);
     if (recognitionRef.current) {
       try {
         recognitionRef.current.start();
+        isListeningRef.current = true;
         setIsListening(true);
       } catch {
         // Already started
@@ -175,6 +186,7 @@ function useSpeechRecognition(onResult: (text: string) => void) {
   }, []);
 
   const stop = useCallback(() => {
+    isListeningRef.current = false;
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();

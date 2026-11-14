@@ -80,8 +80,27 @@ export function shouldFallbackToSeed(error: unknown): boolean {
   return false;
 }
 
-// In-memory sessions store for instant resilience and testing
-const inMemorySessions = new Map<string, OsceSessionDetail>();
+// ---------------------------------------------------------------------------
+// Worker-safe in-memory session store
+//
+// Cloudflare Workers run each HTTP request inside a V8 isolate. Module-level
+// variables are NOT shared across requests that land on different isolates.
+// Using `globalThis` persists the Map within a single isolate instance and
+// across warm requests on the same isolate, dramatically reducing "session
+// not found" failures caused by isolate recycling.
+//
+// This is a best-effort development / seed-fallback mechanism.
+// Production session persistence is handled by the `osce_sessions` DB table
+// (applied via migration 20261103000000_osce_practice_system.sql).
+// ---------------------------------------------------------------------------
+declare const globalThis: typeof global & { __osceSessions?: Map<string, OsceSessionDetail> };
+
+function getInMemorySessions(): Map<string, OsceSessionDetail> {
+  if (!globalThis.__osceSessions) {
+    globalThis.__osceSessions = new Map<string, OsceSessionDetail>();
+  }
+  return globalThis.__osceSessions;
+}
 
 export class SupabaseOsceRepository {
   constructor(private readonly db: SupabaseClient<Database>) {}
@@ -362,6 +381,7 @@ export class SupabaseOsceRepository {
       id: sessionId,
       userId,
       procedureId: procedure.id,
+      procedureSlug: procedure.slug,
       checklistId: procedure.checklist.id,
       procedureTitle: procedure.title,
       stationNumber: procedure.stationNumber,
@@ -381,31 +401,39 @@ export class SupabaseOsceRepository {
       clinicalFeedback: null,
     };
 
-    inMemorySessions.set(sessionId, sessionDetail);
+    getInMemorySessions().set(sessionId, sessionDetail);
 
-    try {
-      await this.db.from("osce_sessions").insert({
-        id: sessionId,
-        user_id: userId,
-        procedure_id: procedure.id,
-        checklist_id: procedure.checklist.id,
-        mode: input.mode,
-        status: "in_progress",
-        started_at: now,
-        score_obtained: 0,
-        total_possible: procedure.totalMarks,
-        percentage: 0,
-        transcript: [],
-      });
-    } catch {
-      // Non-blocking in fallback mode
+    // Only attempt the DB INSERT when the procedure_id is a real UUID (i.e. the OSCE
+    // tables exist and the procedure record came from the database, not the seed fallback).
+    // Seed-fallback procedure IDs are not valid UUIDs and would fail the FK constraint,
+    // producing a silent error that masks the real state of the system.
+    const isRealUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(procedure.id);
+    if (isRealUuid) {
+      try {
+        await this.db.from("osce_sessions").insert({
+          id: sessionId,
+          user_id: userId,
+          procedure_id: procedure.id,
+          checklist_id: procedure.checklist.id,
+          mode: input.mode,
+          status: "in_progress",
+          started_at: now,
+          score_obtained: 0,
+          total_possible: procedure.totalMarks,
+          percentage: 0,
+          transcript: [],
+        });
+      } catch {
+        // Non-blocking — session already persisted in globalThis store above.
+      }
     }
 
     return sessionDetail;
   }
 
   async getSession(userId: string, sessionId: string): Promise<OsceSessionDetail | null> {
-    const inMem = inMemorySessions.get(sessionId);
+    const inMem = getInMemorySessions().get(sessionId);
     if (inMem && inMem.userId === userId) {
       return inMem;
     }
@@ -416,7 +444,7 @@ export class SupabaseOsceRepository {
         .select(
           `id, user_id, procedure_id, checklist_id, mode, status, started_at, completed_at,
            time_spent_seconds, score_obtained, total_possible, percentage, transcript, clinical_feedback,
-           osce_procedures(title, station_number, examining_body, pass_mark)`,
+           osce_procedures(title, slug, station_number, examining_body, pass_mark)`,
         )
         .eq("id", sessionId)
         .eq("user_id", userId)
@@ -450,6 +478,7 @@ export class SupabaseOsceRepository {
           id: data.id,
           userId: data.user_id,
           procedureId: data.procedure_id,
+          procedureSlug: (proc as { slug?: string } | null)?.slug ?? procedureDetail?.slug ?? data.procedure_id,
           checklistId: data.checklist_id,
           procedureTitle: proc?.title ?? "OSCE Procedure",
           stationNumber: proc?.station_number ?? "Station",
@@ -470,7 +499,7 @@ export class SupabaseOsceRepository {
           clinicalFeedback: (data.clinical_feedback as unknown as ClinicalFeedbackSection) ?? null,
         };
 
-        inMemorySessions.set(sessionId, detail);
+        getInMemorySessions().set(sessionId, detail);
         return detail;
       }
     } catch {
@@ -488,7 +517,7 @@ export class SupabaseOsceRepository {
     percentage: number,
     timeSpentSeconds: number,
   ): Promise<void> {
-    const session = inMemorySessions.get(sessionId);
+    const session = getInMemorySessions().get(sessionId);
     if (session) {
       session.transcript = transcript;
       session.evaluations = evaluations;
@@ -531,7 +560,7 @@ export class SupabaseOsceRepository {
     session.passed = passed;
     session.clinicalFeedback = feedback;
 
-    inMemorySessions.set(sessionId, session);
+    getInMemorySessions().set(sessionId, session);
 
     try {
       await this.db
@@ -552,7 +581,7 @@ export class SupabaseOsceRepository {
   }
 
   async getUserHistory(userId: string): Promise<OsceSessionDetail[]> {
-    const memList = Array.from(inMemorySessions.values()).filter(
+    const memList = Array.from(getInMemorySessions().values()).filter(
       (s) => s.userId === userId && s.status === "completed",
     );
 

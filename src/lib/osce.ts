@@ -88,6 +88,8 @@ export interface OsceSessionDetail {
   id: string;
   userId: string;
   procedureId: string;
+  /** URL-safe slug for the procedure — use this for navigation links (Try Again, etc.) */
+  procedureSlug: string;
   checklistId: string;
   procedureTitle: string;
   stationNumber: string;

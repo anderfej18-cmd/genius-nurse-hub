@@ -344,7 +344,7 @@ function OsceResultsPage() {
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
                 <Button asChild variant="outline" size="lg" className="gap-2 min-h-[44px]">
-                  <Link to="/osce/$procedureId" params={{ procedureId: session.procedureId }}>
+                  <Link to="/osce/$procedureId" params={{ procedureId: session.procedureSlug }}>
                     <RefreshCcw className="size-4" /> Try This Station Again
                   </Link>
                 </Button>
